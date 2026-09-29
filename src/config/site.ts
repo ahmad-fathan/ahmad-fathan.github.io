@@ -18,7 +18,6 @@ export const site = {
   },
   url: "https://ahmad-fathan.github.io",
   location: "Yogyakarta, Indonesia",
-  cvPath: "/files/cv.pdf",
 } as const;
 
 export const profiles: {

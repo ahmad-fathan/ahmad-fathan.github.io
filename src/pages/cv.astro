@@ -1,7 +1,6 @@
 ---
 import Layout from "../components/Layout.astro";
 import PageHeader from "../components/PageHeader.astro";
-import { site, profiles } from "../config/site";
 
 const education = [
   { degree: "PhD in Digital Science (Computer Science)", institution: "Universiti Brunei Darussalam", year: "2021–2024", note: "UBD Graduate Scholarship Awardee" },
@@ -10,12 +9,12 @@ const education = [
 ];
 
 const experience = [
-  { role: "Lecturer, Department of Informatics", org: "Universitas Islam Indonesia", year: "2014–present" },
-  { role: "Head of Information System Development, Board of Information System", org: "Universitas Islam Indonesia", year: "2016–2021, 2025–present" },
-  { role: "Researcher, Center of Data Science", org: "Department of Informatics, Universitas Islam Indonesia", year: "2018–present" },
-  { role: "Researcher, Informatics Theory and Intelligent Systems Cluster", org: "Universitas Islam Indonesia", year: "2015–present" },
-  { role: "Lecturer", org: "STMIK Jenderal Achmad Yani Yogyakarta", year: "2011–2014" },
-  { role: "Lecturer", org: "Universitas Teknologi Yogyakarta", year: "2012–2014" },
+  { role: "Secretary, Master's Program in Informatics", org: "Universitas Islam Indonesia", year: "Sep 2026–present", type: "Full-time" },
+  { role: "Assistant Professor", org: "Universitas Islam Indonesia", year: "Oct 2020–present", type: "Full-time" },
+  { role: "Lecturer", org: "Universitas Islam Indonesia", year: "Aug 2014–Sep 2020", type: "Full-time" },
+  { role: "Part-time Lecturer", org: "Universitas Islam Indonesia", year: "Oct 2013–Jul 2014", type: "Part-time" },
+  { role: "Researcher, Center of Data Science", org: "Universitas Islam Indonesia", year: "Oct 2018–present", type: "Part-time" },
+  { role: "Head of Information System Development", org: "Badan Sistem Informasi, Universitas Islam Indonesia", year: "Feb 2025–Aug 2026", type: "" },
 ];
 
 const affiliations = [
@@ -28,27 +27,15 @@ const affiliations = [
 <Layout
   path="/cv"
   title="CV — Ahmad Fathan Hidayatullah"
-  description="Curriculum vitae of Ahmad Fathan Hidayatullah: education, professional experience, research interests, grants, and professional service."
+  description="Curriculum vitae of Ahmad Fathan Hidayatullah: education, professional experience, and affiliations."
 >
   <PageHeader
     eyebrow="Curriculum Vitae"
     title="Curriculum Vitae"
-    lede="Education, professional experience, affiliations, research interests, and service."
+    lede="Education, professional experience, and affiliations."
   />
 
   <div class="container-site py-14 space-y-14">
-    <section class="rounded-2xl border border-line bg-primary-soft/60 p-8">
-      <h2 class="text-xl font-bold tracking-tight">Download</h2>
-      <p class="mt-3 text-sm leading-relaxed text-muted">
-        A summary is below; the complete CV — including the full publication list — is available as a PDF.
-      </p>
-      <div class="mt-6 flex flex-wrap gap-3">
-        <a href={site.cvPath} class="btn btn-primary" target="_blank" rel="noopener noreferrer">Download CV (PDF)</a>
-        <a href={profiles.googleScholar} class="btn btn-outline" target="_blank" rel="noopener noreferrer">Google Scholar ↗</a>
-        <a href={profiles.orcid} class="btn btn-outline" target="_blank" rel="noopener noreferrer">ORCID ↗</a>
-      </div>
-    </section>
-
     <section>
       <h2 class="text-2xl font-bold tracking-tight">Education</h2>
       <ul class="mt-5 list-none space-y-5">
@@ -67,8 +54,11 @@ const affiliations = [
       <ul class="mt-5 list-none divide-y divide-line border-y border-line">
         {experience.map((x) => (
           <li class="flex flex-col gap-1 py-3.5 sm:flex-row sm:items-baseline sm:gap-5">
-            <span class="w-40 shrink-0 font-mono text-sm text-faint">{x.year}</span>
-            <span class="text-sm leading-relaxed text-ink"><span class="font-semibold">{x.role}</span> — {x.org}</span>
+            <span class="w-44 shrink-0 font-mono text-sm text-faint">{x.year}</span>
+            <span class="text-sm leading-relaxed text-ink">
+              <span class="font-semibold">{x.role}</span> — {x.org}
+              {x.type && <span class="text-muted"> · {x.type}</span>}
+            </span>
           </li>
         ))}
       </ul>
