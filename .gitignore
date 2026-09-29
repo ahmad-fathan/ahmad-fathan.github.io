@@ -23,3 +23,6 @@ pnpm-debug.log*
 # editor
 .vscode/
 *.local
+
+# local-only migration leftovers (not part of this site)
+.legacy/
