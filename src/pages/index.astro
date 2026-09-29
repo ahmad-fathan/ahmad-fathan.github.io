@@ -32,7 +32,7 @@ const talks = (await getCollection("speaking"))
         <p class="mt-1 text-sm text-muted">{site.affiliation}</p>
         <p class="mx-auto mt-5 max-w-2xl leading-relaxed text-muted md:mx-0">{site.intro.en}</p>
         <div class="mt-7 flex flex-wrap justify-center gap-3 md:justify-start">
-          <a href={site.cvPath} class="btn btn-primary" target="_blank" rel="noopener noreferrer">{t("cta.downloadCv")}</a>
+          <a href={profiles.scopus} class="btn btn-primary" target="_blank" rel="noopener noreferrer">Scopus ↗</a>
           <a href={profiles.googleScholar} class="btn btn-outline" target="_blank" rel="noopener noreferrer">Google Scholar ↗</a>
           <a href={`mailto:${profiles.email}`} class="btn btn-outline">{t("cta.emailMe")}</a>
         </div>
