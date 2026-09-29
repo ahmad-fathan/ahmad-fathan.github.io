@@ -1,0 +1,47 @@
+---
+import type { Publication } from "../data/publications";
+
+interface Props {
+  pub: Publication;
+}
+const { pub: p } = Astro.props;
+const en = (s?: string) => s?.replace(/(\d)\s*-\s*(\d)/g, "$1\u2013$2");
+const pages = en(p.pages);
+const doiHref = p.doi ? `https://doi.org/${p.doi}` : undefined;
+---
+
+<p class="text-sm leading-relaxed text-ink">
+  {p.authors} ({p.year}). {p.title}.
+  {p.type === "chapter" ? (
+    <>
+      {" "}In <em>{p.venue}</em>
+      {pages && <> (pp. {pages})</>}. {p.publisher}.
+    </>
+  ) : p.type === "journal" ? (
+    <>
+      {" "}
+      <em>{p.venue}</em>
+      {p.volume && (
+        <>
+          {" "}
+          <em>{p.volume}</em>
+        </>
+      )}
+      {p.issue && `(${p.issue})`}
+      {pages && `, ${pages}`}.
+    </>
+  ) : (
+    <>
+      {" "}In <em>{p.venue}</em>
+      {pages && <>, pp. {pages}</>}.
+    </>
+  )}
+  {doiHref && (
+    <>
+      {" "}
+      <a href={doiHref} target="_blank" rel="noopener noreferrer" class="break-all font-medium text-primary hover:text-primary-dark">
+        https://doi.org/{p.doi}
+      </a>
+    </>
+  )}
+</p>

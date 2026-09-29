@@ -1,0 +1,42 @@
+---
+import TeachingListItem from "./TeachingListItem.astro";
+import { type Language } from "../i18n/ui";
+import { getCollection } from "astro:content";
+
+interface Props {
+  lang: Language;
+}
+const { lang } = Astro.props;
+
+const levelLabel: Record<Language, Record<string, string>> = {
+  en: { S1: "Undergraduate (S1)", D4: "Applied Bachelor (D4)", S2: "Master (S2)" },
+  id: { S1: "Sarjana (S1)", D4: "Sarjana Terapan (D4)", S2: "Magister (S2)" },
+};
+
+const courses = (await getCollection("teaching")).sort((a, b) =>
+  a.data.name[lang].localeCompare(b.data.name[lang], lang, { sensitivity: "base" })
+);
+
+const grouped = ["S1", "D4", "S2"]
+  .map((jenjang) => ({
+    jenjang,
+    label: levelLabel[lang][jenjang],
+    items: courses.filter((c) => c.data.jenjang === jenjang),
+  }))
+  .filter((g) => g.items.length > 0);
+---
+
+{
+  grouped.map(
+    (g) => (
+      <section class="mt-10 first:mt-0">
+        <h2 class="text-xl font-bold tracking-tight">{g.label}</h2>
+        <ul class="mt-3 list-disc space-y-3 pl-6 marker:text-primary">
+          {g.items.map((c) => (
+            <TeachingListItem entry={c} lang={lang} hideJenjang />
+          ))}
+        </ul>
+      </section>
+    )
+  )
+}

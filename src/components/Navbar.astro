@@ -1,0 +1,71 @@
+---
+import { ui, type Language } from "../i18n/ui";
+import { site } from "../config/site";
+
+interface Props {
+  lang: Language;
+  active: string;
+  path: string;
+}
+const { lang, active } = Astro.props;
+const t = (k: keyof typeof ui.en) => ui[lang][k];
+
+const items: { key: keyof typeof ui.en; href: string; activeKey: string }[] = [
+  { key: "nav.home", href: "/", activeKey: "" },
+  { key: "nav.publications", href: "/publications", activeKey: "publications" },
+  { key: "nav.research", href: "/research", activeKey: "research" },
+  { key: "nav.teaching", href: "/teaching", activeKey: "teaching" },
+  { key: "nav.talks", href: "/talks", activeKey: "talks" },
+  { key: "nav.cv", href: "/cv", activeKey: "cv" },
+  { key: "nav.contact", href: "/contact", activeKey: "contact" },
+];
+---
+
+<header class="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
+  <nav class="container-site flex h-16 items-center justify-between gap-4" aria-label="Main">
+    <a href="/" class="flex min-w-0 items-center gap-2.5">
+      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary font-mono text-sm font-bold text-white" aria-hidden="true">{site.monogram}</span>
+      <span class="hidden truncate font-semibold tracking-tight sm:block">Ahmad Fathan Hidayatullah</span>
+    </a>
+
+    <div class="hidden items-center gap-1 lg:flex">
+      {items.map((item) => (
+        <a
+          href={item.href}
+          class:list={[
+            "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            active === item.activeKey ? "text-primary" : "text-muted hover:text-ink",
+          ]}
+          aria-current={active === item.activeKey && item.activeKey !== "" ? "page" : undefined}
+        >
+          {t(item.key)}
+        </a>
+      ))}
+    </div>
+
+    <div class="flex items-center gap-2">
+      <a href="/contact" class="hidden rounded-md border border-line px-3 py-2 text-sm font-medium text-ink hover:border-primary/50 hover:text-primary sm:inline-block">{t("nav.contact")}</a>
+      <button type="button" data-menu-toggle aria-expanded="false" aria-controls="mobile-menu" class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-line text-ink lg:hidden" aria-label="Menu">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <div id="mobile-menu" data-mobile-menu class="hidden border-t border-line bg-paper lg:hidden">
+    <div class="container-site flex flex-col gap-1 py-3">
+      {items.map((item) => (
+        <a href={item.href} class:list={["rounded-md px-3 py-2.5 text-base font-medium", active === item.activeKey ? "bg-primary-soft text-primary" : "text-ink hover:bg-soft"]}>{t(item.key)}</a>
+      ))}
+    </div>
+  </div>
+</header>
+
+<script>
+  const toggle = document.querySelector("[data-menu-toggle]");
+  const menu = document.querySelector("[data-mobile-menu]");
+  toggle?.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!open));
+    menu?.classList.toggle("hidden", open);
+  });
+</script>

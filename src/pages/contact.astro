@@ -1,0 +1,43 @@
+---
+import Layout from "../components/Layout.astro";
+import PageHeader from "../components/PageHeader.astro";
+import { profiles } from "../config/site";
+
+const cards = [
+  { title: "Email", value: profiles.email, href: `mailto:${profiles.email}`, hint: "Research, teaching, and academic correspondence." },
+  { title: "Google Scholar", value: "Citation profile", href: profiles.googleScholar, hint: "Full, up-to-date publication list." },
+  { title: "ORCID", value: profiles.orcid.replace("https://orcid.org/", ""), href: profiles.orcid, hint: "Researcher identifier." },
+  { title: "Scopus", value: "Author profile", href: profiles.scopus, hint: "Indexed publications and metrics." },
+  { title: "LinkedIn", value: "Ahmad Fathan Hidayatullah", href: profiles.linkedin, hint: "Professional network." },
+  { title: "GitHub", value: "ahmad-fathan", href: profiles.github, hint: "Code and teaching materials." },
+];
+---
+
+<Layout
+  path="/contact"
+  title="Contact — Ahmad Fathan Hidayatullah"
+  description="Contact Ahmad Fathan Hidayatullah for research collaboration, speaking invitations, teaching inquiries, or general questions."
+>
+  <PageHeader
+    eyebrow="Contact"
+    title="Get in Touch"
+    lede="For research collaboration, speaking invitations, teaching inquiries, or general questions — email is the most reliable way to reach me."
+  />
+
+  <div class="container-site py-14">
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {cards.map((c) => (
+        <a
+          href={c.href}
+          target={c.href.startsWith("mailto:") ? undefined : "_blank"}
+          rel={c.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+          class="group rounded-xl border border-line bg-paper p-6 transition-colors hover:border-primary/50"
+        >
+          <p class="text-xs font-semibold uppercase tracking-widest text-faint">{c.title}</p>
+          <p class="mt-3 break-all font-semibold text-ink group-hover:text-primary">{c.value}</p>
+          <p class="mt-1.5 text-sm text-muted">{c.hint}</p>
+        </a>
+      ))}
+    </div>
+  </div>
+</Layout>

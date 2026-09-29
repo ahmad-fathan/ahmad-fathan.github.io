@@ -1,0 +1,99 @@
+---
+import Layout from "../../../components/Layout.astro";
+import { readTime, formatDate, categoryLabel, writingUrl } from "../../../lib/utils";
+import { ui, type UIKey } from "../../../i18n/ui";
+import { getCollection, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("writing", ({ data }) => data.language === "en" && !data.draft);
+  return posts.map((p) => ({ params: { category: p.data.category, slug: p.id } }));
+}
+
+const lang = "en" as const;
+const t = (k: UIKey) => ui[lang][k];
+const posts = await getCollection("writing", ({ data }) => data.language === "en" && !data.draft);
+const entry = posts.find((p) => p.id === Astro.params.slug)!;
+const { data } = entry;
+const paired = entry.data.translation_key
+  ? (await getCollection("writing", ({ data: d }) => d.translation_key === entry.data.translation_key && d.language === "id" && !d.draft))[0]
+  : undefined;
+const { Content } = await render(entry);
+const related = (await getCollection("writing", ({ data: d }) => d.language === "en" && !d.draft && d.category === data.category && d.title !== data.title)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()).slice(0, 2);
+const tags = data.tags;
+---
+
+<Layout
+  lang={lang}
+  path={`/writing/${data.category}/${entry.id}`}
+  title={`${data.title} — Ahmad Fathan Hidayatullah`}
+  description={data.description}
+  altHrefOverride={paired ? undefined : "/id/writing"}
+>
+  <article>
+    <header class="border-b border-line bg-soft">
+      <div class="container-article py-12 sm:py-14">
+        <nav class="text-xs font-medium text-faint" aria-label="Breadcrumb">
+          <a href="/writing" class="hover:text-primary">Writing</a>
+          <span class="mx-1.5" aria-hidden="true">/</span>
+          <a href={`/writing/${data.category}`} class="hover:text-primary">{categoryLabel(data.category, lang)}</a>
+        </nav>
+        <h1 class="mt-5 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{data.title}</h1>
+        <p class="mt-4 text-lg leading-relaxed text-muted">{data.description}</p>
+        <div class="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
+          <span class="font-medium text-ink">Ahmad Fathan Hidayatullah</span>
+          <span aria-hidden="true">·</span>
+          <time datetime={data.date.toISOString()}>{formatDate(data.date, lang)}</time>
+          {data.updated && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{t("misc.updated")}: {formatDate(data.updated, lang)}</span>
+            </>
+          )}
+          <span aria-hidden="true">·</span>
+          <span>{readTime(entry.body)} {t("writing.readTime")}</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="container-article py-12">
+      {!paired && (
+        <p class="mb-8 rounded-lg border border-dashed border-line bg-soft/60 px-4 py-3 text-sm text-muted">
+          {t("writing.noTranslation")}
+        </p>
+      )}
+      {paired && (
+        <p class="mb-8 rounded-lg bg-primary-soft px-4 py-3 text-sm text-primary">
+          <a href={writingUrl("id", paired.data.category, paired.id)} class="font-semibold underline underline-offset-2">
+            Baca artikel ini dalam Bahasa Indonesia →
+          </a>
+        </p>
+      )}
+
+      <div class="prose-article">
+        <Content />
+      </div>
+
+      {tags.length > 0 && (
+        <div class="mt-10 flex flex-wrap gap-2 border-t border-line pt-8">
+          {tags.map((tag) => (
+            <span class="rounded-full bg-soft px-3 py-1 text-xs font-medium text-muted">#{tag}</span>
+          ))}
+        </div>
+      )}
+
+      {related.length > 0 && (
+        <section class="mt-12 border-t border-line pt-8" aria-label={t("writing.related")}>
+          <h2 class="text-xl font-bold tracking-tight">{t("writing.related")}</h2>
+          <div class="mt-5 grid gap-5 sm:grid-cols-2">
+            {related.map((r) => (
+              <a href={writingUrl("en", r.data.category, r.id)} class="rounded-xl border border-line p-5 hover:border-primary/50">
+                <p class="text-xs font-medium text-faint">{categoryLabel(r.data.category, lang)} · {formatDate(r.data.date, lang)}</p>
+                <p class="mt-2 font-semibold leading-snug">{r.data.title}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  </article>
+</Layout>

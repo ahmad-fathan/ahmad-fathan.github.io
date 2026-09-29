@@ -1,0 +1,88 @@
+---
+import Layout from "../components/Layout.astro";
+import PageHeader from "../components/PageHeader.astro";
+import { site, profiles } from "../config/site";
+
+const education = [
+  { degree: "PhD in Digital Science (Computer Science)", institution: "Universiti Brunei Darussalam", year: "2021–2024", note: "UBD Graduate Scholarship Awardee" },
+  { degree: "Master of Computer Science (M.Cs.)", institution: "Universitas Gadjah Mada", year: "2011–2014" },
+  { degree: "Bachelor of Engineering (B.Eng.), Informatics", institution: "Universitas Islam Negeri Sunan Kalijaga Yogyakarta", year: "2006–2010" },
+];
+
+const experience = [
+  { role: "Lecturer, Department of Informatics", org: "Universitas Islam Indonesia", year: "2014–present" },
+  { role: "Head of Information System Development, Board of Information System", org: "Universitas Islam Indonesia", year: "2016–2021, 2025–present" },
+  { role: "Researcher, Center of Data Science", org: "Department of Informatics, Universitas Islam Indonesia", year: "2018–present" },
+  { role: "Researcher, Informatics Theory and Intelligent Systems Cluster", org: "Universitas Islam Indonesia", year: "2015–present" },
+  { role: "Lecturer", org: "STMIK Jenderal Achmad Yani Yogyakarta", year: "2011–2014" },
+  { role: "Lecturer", org: "Universitas Teknologi Yogyakarta", year: "2012–2014" },
+];
+
+const affiliations = [
+  "Member, Indonesia Association of Computational Linguistics (INACL), 2016–present",
+  "Member, Indonesia Association of Data Scientists (AIDI), 2019–present",
+  "Member, IEEE",
+];
+---
+
+<Layout
+  path="/cv"
+  title="CV — Ahmad Fathan Hidayatullah"
+  description="Curriculum vitae of Ahmad Fathan Hidayatullah: education, professional experience, research interests, grants, and professional service."
+>
+  <PageHeader
+    eyebrow="Curriculum Vitae"
+    title="Curriculum Vitae"
+    lede="Education, professional experience, affiliations, research interests, and service."
+  />
+
+  <div class="container-site py-14 space-y-14">
+    <section class="rounded-2xl border border-line bg-primary-soft/60 p-8">
+      <h2 class="text-xl font-bold tracking-tight">Download</h2>
+      <p class="mt-3 text-sm leading-relaxed text-muted">
+        Publications and citation metrics are maintained on Google Scholar; the full CV is available on request.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a href={site.cvPath} class="btn btn-primary" target="_blank" rel="noopener noreferrer">Download CV (PDF)</a>
+        <a href={profiles.googleScholar} class="btn btn-outline" target="_blank" rel="noopener noreferrer">Google Scholar ↗</a>
+        <a href={profiles.orcid} class="btn btn-outline" target="_blank" rel="noopener noreferrer">ORCID ↗</a>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-2xl font-bold tracking-tight">Education</h2>
+      <ul class="mt-5 list-none space-y-5">
+        {education.map((e) => (
+          <li class="rounded-xl border border-line bg-paper p-5">
+            <p class="font-semibold tracking-tight">{e.degree}</p>
+            <p class="mt-1 text-sm text-muted">{e.institution} · {e.year}</p>
+            {e.note && <p class="mt-1 text-sm text-muted">{e.note}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-2xl font-bold tracking-tight">Professional Experience</h2>
+      <ul class="mt-5 list-none divide-y divide-line border-y border-line">
+        {experience.map((x) => (
+          <li class="flex flex-col gap-1 py-3.5 sm:flex-row sm:items-baseline sm:gap-5">
+            <span class="w-40 shrink-0 font-mono text-sm text-faint">{x.year}</span>
+            <span class="text-sm leading-relaxed text-ink"><span class="font-semibold">{x.role}</span> — {x.org}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-2xl font-bold tracking-tight">Professional Affiliations</h2>
+      <ul class="mt-5 list-disc space-y-2 pl-6 text-sm text-muted marker:text-primary">
+        {affiliations.map((a) => <li>{a}</li>)}
+      </ul>
+    </section>
+
+    <p class="text-sm text-muted">
+      Full publication list: <a href="/publications" class="font-medium text-primary hover:text-primary-dark">Publications</a>.
+    </p>
+  </div>
+</Layout>

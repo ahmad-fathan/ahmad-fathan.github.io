@@ -1,0 +1,30 @@
+---
+import { ui, type Language } from "../i18n/ui";
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  entry: CollectionEntry<"teaching">;
+  lang: Language;
+  hideJenjang?: boolean;
+}
+const { entry, lang, hideJenjang = false } = Astro.props;
+const { data } = entry;
+const prodiRaw = data.fakultasProdi?.split(" - ")[1] ?? data.fakultasProdi;
+const prodiLabel = (p?: string) =>
+  (p &&
+    (lang === "en"
+      ? { Informatika: "Informatics", "Bisnis Digital": "Digital Business", "Informatika (IP)": "Informatics (International Programme)" }
+      : {})[p as "Informatika" | "Bisnis Digital" | "Informatika (IP)"]) ||
+  p;
+const jenjangLabel = (code: string) =>
+  ({
+    en: { S1: "Undergraduate (S1)", S2: "Master (S2)", D4: "Applied Bachelor (D4)" },
+    id: { S1: "Sarjana (S1)", S2: "Magister (S2)", D4: "Sarjana Terapan (D4)" },
+  })[lang][code as "S1" | "S2" | "D4"] ?? code;
+---
+
+<li class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+  <span class="font-semibold">{data.name[lang]}</span>
+  {!hideJenjang && <span class="text-sm text-muted">· {jenjangLabel(data.jenjang ?? "")}</span>}
+  <span class="text-sm text-muted">· {prodiLabel(prodiRaw)}</span>
+</li>

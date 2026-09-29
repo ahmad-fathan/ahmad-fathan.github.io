@@ -1,0 +1,25 @@
+---
+import Layout from "../components/Layout.astro";
+import PageHeader from "../components/PageHeader.astro";
+import TeachingGroups from "../components/TeachingGroups.astro";
+import { profiles } from "../config/site";
+---
+
+<Layout
+  path="/teaching"
+  title="Teaching — Ahmad Fathan Hidayatullah"
+  description="Courses taught by Ahmad Fathan Hidayatullah at Universitas Islam Indonesia: artificial intelligence, text analytics, deep learning, mobile application development, and more."
+>
+  <PageHeader
+    eyebrow="Teaching"
+    title="Teaching"
+    lede="Courses taught at the Department of Informatics, Universitas Islam Indonesia — from foundational mathematics and data science to deep learning and mobile application development."
+  />
+
+  <div class="container-site py-14">
+    <TeachingGroups lang="en" />
+    <p class="mt-10 text-sm text-muted">
+      Teaching materials for several courses are shared on <a href={profiles.github} class="font-medium text-primary hover:text-primary-dark" target="_blank" rel="noopener noreferrer">GitHub</a>.
+    </p>
+  </div>
+</Layout>

@@ -1,0 +1,63 @@
+---
+import { ui, type Language } from "../i18n/ui";
+import { site, profiles } from "../config/site";
+
+interface Props {
+  lang: Language;
+}
+const { lang } = Astro.props;
+const t = (k: keyof typeof ui.en) => ui[lang][k];
+const linkTarget = (h: string) => (h.startsWith("mailto:") ? undefined : "_blank");
+const linkRel = (h: string) => (h.startsWith("mailto:") ? undefined : "noopener noreferrer");
+const year = new Date().getFullYear();
+
+const quickLinks = [
+  { label: t("nav.home"), href: "/" },
+  { label: t("nav.publications"), href: "/publications" },
+  { label: t("nav.research"), href: "/research" },
+  { label: t("nav.teaching"), href: "/teaching" },
+  { label: t("nav.talks"), href: "/talks" },
+  { label: t("nav.cv"), href: "/cv" },
+  { label: t("nav.contact"), href: "/contact" },
+];
+const profileLinks: { label: string; href: string }[] = [
+  { label: "Google Scholar", href: profiles.googleScholar },
+  { label: "Scopus", href: profiles.scopus },
+  { label: "ORCID", href: profiles.orcid },
+  { label: "GitHub", href: profiles.github },
+  { label: "LinkedIn", href: profiles.linkedin },
+  { label: "Email", href: `mailto:${profiles.email}` },
+];
+---
+
+<footer class="border-t border-line bg-soft">
+  <div class="container-site grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="sm:col-span-2 lg:col-span-2">
+      <p class="text-lg font-semibold tracking-tight">{site.name}</p>
+      <p class="mt-1 text-sm font-medium text-primary">{site.tagline[lang]}</p>
+      <p class="mt-3 max-w-sm text-sm text-muted">{ui[lang]["footer.tagline"]}</p>
+    </div>
+    <nav aria-label={t("footer.quickLinks")}>
+      <p class="text-xs font-semibold uppercase tracking-widest text-faint">{t("footer.quickLinks")}</p>
+      <ul class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+        {quickLinks.map((l) => (
+          <li><a href={l.href} class="text-muted hover:text-ink">{l.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+    <nav aria-label={t("footer.profile")}>
+      <p class="text-xs font-semibold uppercase tracking-widest text-faint">{t("footer.profile")}</p>
+      <ul class="mt-3 space-y-1.5 text-sm">
+        {profileLinks.map((l) => (
+          <li><a href={l.href} class="text-muted hover:text-ink" target={linkTarget(l.href)} rel={linkRel(l.href)}>{l.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+  <div class="border-t border-line">
+    <div class="container-site flex flex-col items-start justify-between gap-2 py-5 text-xs text-faint sm:flex-row sm:items-center">
+      <p>© {year} {site.name}. {t("footer.rights")}</p>
+      <p>{t("footer.built")}</p>
+    </div>
+  </div>
+</footer>

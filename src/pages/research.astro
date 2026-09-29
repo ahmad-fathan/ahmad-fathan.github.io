@@ -1,0 +1,111 @@
+---
+import Layout from "../components/Layout.astro";
+import PageHeader from "../components/PageHeader.astro";
+import { researchInterests, profiles } from "../config/site";
+
+const themes = [
+  {
+    title: "Code-Mixed and Low-Resource Language Processing",
+    body: "Language identification, corpus construction, and modelling for Indonesian-Javanese-English code-mixed text, where standard NLP resources are scarce and spelling is highly variable.",
+  },
+  {
+    title: "Transformer and Large Language Models",
+    body: "Pre-trained and parameter-efficient fine-tuning (LoRA) strategies for sentiment analysis, emotion classification, and entity extraction in Indonesian and other low-resource languages.",
+  },
+  {
+    title: "Text Mining and Topic Modelling",
+    body: "Latent Dirichlet Allocation, sentiment analysis, and topic discovery on social media and news data, including adult-content and negativity detection.",
+  },
+  {
+    title: "Data Science and Applied AI",
+    body: "End-to-end data pipelines, feature engineering, and evaluation of machine learning systems applied to real problems in industry, education, and public services.",
+  },
+];
+
+const grants = [
+  { year: "2020", title: "Dialect Identification for Javanese Language using Deep Learning" },
+  { year: "2019", title: "Adult Content Detection from Short Text in Bahasa Indonesia using LSTM Networks" },
+  { year: "2019", title: "Topic Modeling for Sentiment Analysis on Indonesian Presidential Election using Twitter Data" },
+  { year: "2018", title: "Discovering Infrastructure Development Topic in Indonesia using LDA Topic Modeling" },
+  { year: "2018", title: "Topic Modeling of Weather and Climate Condition on Twitter using LDA" },
+];
+
+const reviewers = [
+  "Applied Intelligence",
+  "Engineering Applications of Artificial Intelligence",
+  "Expert Systems with Applications",
+  "Heliyon",
+  "Intelligence-based Medicine",
+  "Informatics in Medicine Unlocked",
+  "International Journal of Information Management Data Insights",
+  "IAES International Journal of Artificial Intelligence (IJ-AI)",
+  "Social Network Analysis and Mining",
+  "IEEE Access",
+  "Connection Science",
+  "Cybernetics & Systems",
+  "PeerJ Computer Science",
+  "Natural Language Processing",
+];
+---
+
+<Layout
+  path="/research"
+  title="Research — Ahmad Fathan Hidayatullah"
+  description="Research by Ahmad Fathan Hidayatullah: code-mixed and low-resource NLP, transformer and large language models, text mining, and applied data science."
+>
+  <PageHeader
+    eyebrow="Research"
+    title="Research"
+    lede="Natural language processing for code-mixed and low-resource languages, transformer and large language models, text mining, and applied data science."
+  />
+
+  <div class="container-site py-14 space-y-14">
+    <section aria-labelledby="interests">
+      <h2 id="interests" class="text-2xl font-bold tracking-tight">Research Interests</h2>
+      <div class="mt-5 flex flex-wrap gap-2">
+        {researchInterests.map((r) => (
+          <span class="rounded-full border border-line bg-soft px-4 py-2 text-sm font-medium text-ink">{r}</span>
+        ))}
+      </div>
+    </section>
+
+    <section aria-labelledby="themes">
+      <h2 id="themes" class="text-2xl font-bold tracking-tight">Research Themes</h2>
+      <div class="mt-6 grid gap-5 sm:grid-cols-2">
+        {themes.map((t) => (
+          <article class="rounded-xl border border-line bg-paper p-6">
+            <h3 class="text-lg font-semibold tracking-tight">{t.title}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted">{t.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section aria-labelledby="grants">
+      <h2 id="grants" class="text-2xl font-bold tracking-tight">Research Grants</h2>
+      <ul class="mt-5 list-none divide-y divide-line border-y border-line">
+        {grants.map((g) => (
+          <li class="flex gap-5 py-3.5">
+            <span class="w-14 shrink-0 font-mono text-sm text-faint">{g.year}</span>
+            <span class="text-sm leading-relaxed text-ink">{g.title}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="reviewing">
+      <h2 id="reviewing" class="text-2xl font-bold tracking-tight">Peer Review Service</h2>
+      <p class="mt-3 max-w-2xl text-sm leading-relaxed text-muted">Reviewer for the following journals:</p>
+      <ul class="mt-5 flex flex-wrap gap-2">
+        {reviewers.map((r) => (
+          <li class="rounded-full border border-line bg-soft px-3.5 py-1.5 text-sm text-muted">{r}</li>
+        ))}
+      </ul>
+      <p class="mt-6 text-sm text-muted">
+        Publications and citation metrics: <a href={profiles.googleScholar} class="font-medium text-primary hover:text-primary-dark" target="_blank" rel="noopener noreferrer">Google Scholar</a>,
+        {" "}<a href={profiles.scopus} class="font-medium text-primary hover:text-primary-dark" target="_blank" rel="noopener noreferrer">Scopus</a>,
+        {" "}<a href={profiles.orcid} class="font-medium text-primary hover:text-primary-dark" target="_blank" rel="noopener noreferrer">ORCID</a>.
+      </p>
+    </section>
+  </div>
+</Layout>

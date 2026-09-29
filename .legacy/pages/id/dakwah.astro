@@ -1,0 +1,27 @@
+---
+import Layout from "../../components/Layout.astro";
+import PageHeader from "../../components/PageHeader.astro";
+
+const sections = [
+  { title: "Ceramah & Kajian", desc: "Rekaman ceramah dan catatan kajian bertema Islami." },
+  { title: "Catatan Pengajian", desc: "Ringkasan dan catatan dari pengajian rutin." },
+  { title: "Belajar Dasar Al-Qur'an", desc: "Panduan dan materi untuk belajar membaca Al-Qur'an." },
+  { title: "Bacaan Pilihan", desc: "Artikel dan pengingat pilihan untuk amalan sehari-hari." },
+];
+---
+
+<Layout lang="id" path="/id/dakwah" title="Dakwah & Pembelajaran Islam — Ahmad Fathan Hidayatullah" description="Ceramah, catatan kajian, dan materi pembelajaran Islam yang dibagikan oleh Ahmad Fathan Hidayatullah.">
+  <PageHeader eyebrow="Dakwah" title="Dakwah & Pembelajaran Islam" lede="Ceramah, catatan pengajian, belajar dasar Al-Qur'an, dan materi pilihan — dibagikan dalam semangat belajar dan mengajar yang sama dengan bagian lain di situs ini." />
+
+  <div class="container-site py-14">
+    <div class="grid gap-5 sm:grid-cols-2">
+      {sections.map((s) => (
+        <div class="rounded-xl border border-dashed border-line bg-soft/50 p-7">
+          <h2 class="text-lg font-semibold tracking-tight">{s.title}</h2>
+          <p class="mt-2 text-sm leading-relaxed text-muted">{s.desc}</p>
+          <p class="mt-4 text-xs font-medium text-faint">Materi segera hadir.</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</Layout>

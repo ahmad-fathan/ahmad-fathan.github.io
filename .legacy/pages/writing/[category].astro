@@ -1,0 +1,41 @@
+---
+import Layout from "../../components/Layout.astro";
+import PageHeader from "../../components/PageHeader.astro";
+import ArticleCard from "../../components/ArticleCard.astro";
+import { categoryLabel, categories } from "../../lib/utils";
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+  return categories.map((c) => ({ params: { category: c } }));
+}
+
+const { category } = Astro.params;
+const lang = "en" as const;
+const posts = (await getCollection("writing", ({ data }) => data.language === "en" && !data.draft && data.category === category)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const catLabel = categoryLabel(category ?? "", lang);
+---
+
+<Layout
+  lang={lang}
+  path={`/writing/${category}`}
+  title={`${catLabel} — Writing | Ahmad Fathan Hidayatullah`}
+  description={`${catLabel} articles by Ahmad Fathan Hidayatullah.`}
+>
+  <PageHeader eyebrow="Writing" title={catLabel} lede="Articles filed under this category." />
+
+  <div class="container-site py-14">
+    <div class="mb-8 flex flex-wrap gap-2">
+      <a href="/writing" class="rounded-full border border-line px-3 py-1.5 text-sm text-muted hover:border-primary hover:text-primary">All</a>
+      {categories.filter((c) => c !== category).map((c) => (
+        <a href={`/writing/${c}`} class="rounded-full border border-line px-3 py-1.5 text-sm text-muted hover:border-primary hover:text-primary">{categoryLabel(c, lang)}</a>
+      ))}
+    </div>
+    {posts.length > 0 ? (
+      <div class="grid gap-5 sm:grid-cols-2">
+        {posts.map((p) => <ArticleCard entry={p} lang={lang} />)}
+      </div>
+    ) : (
+      <p class="rounded-xl border border-dashed border-line p-8 text-center text-sm text-muted">No articles in this category yet.</p>
+    )}
+  </div>
+</Layout>

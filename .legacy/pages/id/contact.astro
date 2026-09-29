@@ -1,0 +1,41 @@
+---
+import Layout from "../../components/Layout.astro";
+import PageHeader from "../../components/PageHeader.astro";
+import { ui, type UIKey } from "../../i18n/ui";
+import { profiles } from "../../config/site";
+
+const t = (k: UIKey) => ui.id[k];
+const cards = [
+  { title: "Email", value: profiles.email, href: `mailto:${profiles.email}`, hint: "Untuk korespondensi umum, riset, dan akademik." },
+  { title: "GitHub", value: "fathanick", href: profiles.github, hint: "Kode, dataset, dan materi pengajaran." },
+  ...(profiles.googleScholar ? [{ title: "Google Scholar", value: "Profil sitasi", href: profiles.googleScholar, hint: "Daftar publikasi lengkap." }] : []),
+  ...(profiles.orcid ? [{ title: "ORCID", value: profiles.orcid.replace("https://orcid.org/", ""), href: profiles.orcid, hint: "Identitas peneliti." }] : []),
+  ...(profiles.linkedin ? [{ title: "LinkedIn", value: "Profil", href: profiles.linkedin, hint: "Jaringan profesional." }] : []),
+];
+const speakSubject = encodeURIComponent("Undangan berbicara / lokakarya untuk Ahmad Fathan Hidayatullah");
+---
+
+<Layout lang="id" path="/id/contact" title="Kontak — Ahmad Fathan Hidayatullah" description="Hubungi Ahmad Fathan Hidayatullah untuk kolaborasi riset, pengajaran, undangan berbicara, dan pertanyaan umum.">
+  <PageHeader eyebrow="Kontak" title="Hubungi Saya" lede="Untuk kolaborasi riset, undangan berbicara, pertanyaan pengajaran, atau hal umum — saya rutin membaca email dan berusaha membalas dengan cepat." />
+
+  <div class="container-site py-14">
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {cards.map((c) => (
+        <a href={c.href} target={c.href.startsWith("mailto:") ? undefined : "_blank"} rel={c.href.startsWith("mailto:") ? undefined : "noopener noreferrer"} class="group rounded-xl border border-line bg-paper p-6 transition-colors hover:border-primary/50">
+          <p class="text-xs font-semibold uppercase tracking-widest text-faint">{c.title}</p>
+          <p class="mt-3 break-all font-semibold text-ink group-hover:text-primary">{c.value}</p>
+          <p class="mt-1.5 text-sm text-muted">{c.hint}</p>
+        </a>
+      ))}
+    </div>
+
+    <div class="mt-14 rounded-2xl border border-line bg-primary-soft/60 p-10 text-center">
+      <h2 class="text-2xl font-bold tracking-tight">Undang Saya sebagai Pembicara</h2>
+      <p class="mx-auto mt-3 max-w-xl text-muted">
+        Merencanakan seminar, lokakarya, atau pelatihan? Saya tersedia untuk undangan berbicara seputar AI, NLP,
+        Sains Data, teknologi, dan topik akademik.
+      </p>
+      <a href={`mailto:${profiles.email}?subject=${speakSubject}`} class="btn btn-primary mt-7">{t("cta.inviteSpeak")}</a>
+    </div>
+  </div>
+</Layout>

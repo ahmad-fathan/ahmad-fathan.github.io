@@ -1,0 +1,51 @@
+---
+import Navbar from "./Navbar.astro";
+import Footer from "./Footer.astro";
+import { site } from "../config/site";
+import { ui, type Language } from "../i18n/ui";
+import "../styles/global.css";
+
+interface Props {
+  lang?: Language;
+  path: string; // canonical path, e.g. "/about"
+  title?: string;
+  description?: string;
+}
+const { lang = "en", path, title = ui[lang]["site.title"], description = ui[lang]["site.description"] } = Astro.props;
+
+const canonical = site.url + (path === "/" ? "/" : path.replace(/\/$/, ""));
+const isEn = lang === "en";
+const cleanPath = path === "/" ? "" : path.replace(/\/$/, "");
+const activeNavKey = (() => {
+  const first = cleanPath.split("/").filter(Boolean)[0] ?? "";
+  return ["publications", "research", "teaching", "talks", "cv", "contact"].includes(first) ? first : "";
+})();
+---
+
+<!doctype html>
+<html lang={isEn ? "en" : "id"}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={ui[lang]["site.author"]} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary" />
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-white">{ui[lang]["nav.skip"]}</a>
+    <Navbar lang={lang} active={activeNavKey} path={path} />
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <Footer lang={lang} />
+  </body>
+</html>
