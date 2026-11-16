@@ -11,6 +11,8 @@ English only; deployed to GitHub Pages at https://ahmad-fathan.github.io via Git
 | `/publications` | Full publication list, grouped by year, APA style, DOI links |
 | `/research` | Research interests, themes, grants, peer-review service |
 | `/teaching` | Courses taught, grouped by study level |
+| `/teaching/simulations` | Index of interactive teaching simulations |
+| `/teaching/simulations/<slug>` | One interactive simulation (e.g. `naive-bayes`) |
 | `/talks` | Invited talks, seminars, workshops, trainings (newest first) |
 | `/cv` | Education, professional experience, affiliations + CV PDF |
 | `/contact` | Contact channels |
@@ -20,6 +22,7 @@ English only; deployed to GitHub Pages at https://ahmad-fathan.github.io via Git
 - **Identity, profile URLs, research interests** → `src/config/site.ts` (single source of truth)
 - **Publications** → `src/data/publications.ts` (typed array; keep in sync with Google Scholar)
 - **Teaching** → one Markdown file per course in `src/content/teaching/` (schema in `src/content.config.ts`)
+- **Simulations** → add the page in `src/pages/teaching/simulations/<slug>.astro` (component in `src/components/simulations/`) and one entry in `src/data/simulations.ts`; the index page, Teaching page and sitemap pick it up
 - **Talks** → one Markdown file per event in `src/content/speaking/`
 - **UI labels** → `src/i18n/ui.ts`
 - **CV PDF** → replace `public/files/cv.pdf`
