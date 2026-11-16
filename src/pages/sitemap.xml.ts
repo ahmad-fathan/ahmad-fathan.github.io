@@ -1,7 +1,12 @@
 import { site } from "../config/site";
+import { simulations } from "../data/simulations";
 
 export async function GET() {
-  const paths = ["", "publications", "research", "teaching", "talks", "cv", "contact"];
+  const paths = [
+    "", "publications", "research", "teaching", "talks", "cv", "contact",
+    "teaching/simulations",
+    ...simulations.map((s) => `teaching/simulations/${s.slug}`),
+  ];
   const list = paths.map((p) => `  <url><loc>${site.url}/${p}</loc></url>`).join("\n");
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
