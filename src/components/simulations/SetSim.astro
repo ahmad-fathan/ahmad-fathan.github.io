@@ -1,0 +1,536 @@
+---
+// Set theory interactive simulation: a Venn-diagram stepper.
+// Five worked examples from the "Set" module of Fundamentals of Mathematics.
+// Each step shades a region of the diagram and writes the result, with a
+// plain-words explanation. "Guess first" mode asks the student before showing it.
+// Every set on screen is computed from the data below, never typed by hand.
+---
+
+<div class="setsim" data-theme="light" id="setsim">
+  <div class="ss-top">
+    <nav class="ss-tabs" id="ss-tabs" aria-label="Examples"></nav>
+    <button type="button" class="ss-btn ss-ghost ss-sm" id="ss-theme" aria-label="Toggle dark mode">Dark mode</button>
+  </div>
+
+  <div class="ss-grid">
+    <section class="ss-card ss-left" aria-label="Venn diagram">
+      <div class="ss-eyebrow" id="ss-case-sub"></div>
+      <h2 class="ss-h2" id="ss-case-title"></h2>
+      <div class="ss-given" id="ss-given"></div>
+      <div class="ss-venn" id="ss-venn"></div>
+      <div class="ss-result" id="ss-result" aria-live="polite"></div>
+    </section>
+
+    <section class="ss-card ss-right" aria-label="Step explanation">
+      <div class="ss-stephead">
+        <span class="ss-counter" id="ss-counter"></span>
+        <label class="ss-switch"><input type="checkbox" id="ss-guess" /> Guess first</label>
+      </div>
+      <div id="ss-step"></div>
+      <div class="ss-controls">
+        <button type="button" class="ss-btn" id="ss-back">← Back</button>
+        <button type="button" class="ss-btn ss-primary" id="ss-next">Next →</button>
+        <button type="button" class="ss-btn ss-ghost" id="ss-play">▶ Play</button>
+        <button type="button" class="ss-btn ss-ghost" id="ss-restart">↺ Restart</button>
+      </div>
+      <div class="ss-dots" id="ss-dots" aria-label="Steps"></div>
+    </section>
+  </div>
+
+  <details class="ss-ref">
+    <summary>Notation cheat sheet</summary>
+    <table class="ss-table">
+      <thead><tr><th>Operation</th><th>Notation</th><th>Contains the elements that are …</th></tr></thead>
+      <tbody>
+        <tr><td>Union</td><td class="m">A ∪ B</td><td>in <span class="m">A</span>, in <span class="m">B</span>, or in both</td></tr>
+        <tr><td>Intersection</td><td class="m">A ∩ B</td><td>in both <span class="m">A</span> and <span class="m">B</span></td></tr>
+        <tr><td>Complement</td><td class="m">A′</td><td>in <span class="m">U</span> but not in <span class="m">A</span></td></tr>
+        <tr><td>Difference</td><td class="m">A − B</td><td>in <span class="m">A</span> but not in <span class="m">B</span></td></tr>
+        <tr><td>Symmetric difference</td><td class="m">A Δ B</td><td>in exactly one of <span class="m">A</span> and <span class="m">B</span></td></tr>
+        <tr><td>Inclusion-Exclusion (2 sets)</td><td class="m">|A ∪ B| = |A| + |B| − |A ∩ B|</td><td>count each set, then remove the overlap counted twice</td></tr>
+      </tbody>
+    </table>
+  </details>
+</div>
+
+<style is:global>
+  .setsim {
+    --ss-bg: #ffffff; --ss-card: #ffffff; --ss-soft: #f8fafc; --ss-ink: #0f172a; --ss-muted: #5b6573;
+    --ss-line: #e2e8f0; --ss-primary: #2563eb; --ss-primary-soft: #eff6ff; --ss-shade: rgba(37, 99, 235, 0.28);
+    --ss-hl: #fef9c3; --ss-bad: #dc2626; --ss-bad-soft: #fef2f2; --ss-good: #16a34a; --ss-good-soft: #f0fdf4;
+    --ss-warn: #d97706; --ss-warn-soft: #fff7ed;
+    background: var(--ss-bg); color: var(--ss-ink); border-radius: 0.9rem; font-size: 1rem; line-height: 1.6;
+  }
+  .setsim[data-theme="dark"] {
+    --ss-bg: #0b1220; --ss-card: #111a2e; --ss-soft: #16213a; --ss-ink: #e5e9f0; --ss-muted: #9aa6b8;
+    --ss-line: #26324a; --ss-primary: #60a5fa; --ss-primary-soft: #172554; --ss-shade: rgba(96, 165, 250, 0.32);
+    --ss-hl: #3a3410; --ss-bad: #f87171; --ss-bad-soft: #2a1414; --ss-good: #4ade80; --ss-good-soft: #10261a;
+    --ss-warn: #fbbf24; --ss-warn-soft: #2a2110;
+    padding: 1rem;
+  }
+  .setsim * { box-sizing: border-box; }
+  .setsim p { margin: 0 0 0.6rem; }
+  .setsim .m { font-family: "STIX Two Text", "Cambria Math", "Times New Roman", serif; font-style: italic; font-size: 1.08em; white-space: nowrap; }
+  .setsim .m .up { font-style: normal; }
+
+  .setsim .ss-top { display: flex; gap: 0.75rem; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+  .setsim .ss-tabs { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .setsim .ss-tab { font: inherit; font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.8rem; border-radius: 999px; border: 1px solid var(--ss-line); background: var(--ss-card); color: var(--ss-muted); cursor: pointer; }
+  .setsim .ss-tab:hover { border-color: var(--ss-primary); color: var(--ss-primary); }
+  .setsim .ss-tab[aria-current="true"] { background: var(--ss-primary); border-color: var(--ss-primary); color: #fff; }
+  .setsim[data-theme="dark"] .ss-tab[aria-current="true"] { color: #0b1220; }
+
+  .setsim .ss-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+  @media (max-width: 860px) { .setsim .ss-grid { grid-template-columns: 1fr; } }
+  .setsim .ss-card { background: var(--ss-card); border: 1px solid var(--ss-line); border-radius: 0.75rem; padding: 1rem 1.15rem; min-width: 0; }
+  .setsim .ss-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ss-primary); }
+  .setsim .ss-h2 { font-size: 1.3rem; font-weight: 750; letter-spacing: -0.01em; margin: 0.1rem 0 0.5rem; line-height: 1.3; }
+  .setsim .ss-given { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; font-size: 0.95rem; margin-bottom: 0.4rem; }
+  .setsim .ss-venn svg { width: 100%; height: auto; display: block; }
+  .setsim .ss-venn .frame { fill: none; stroke: var(--ss-muted); stroke-width: 1.5; }
+  .setsim .ss-venn .ring { fill: none; stroke: var(--ss-primary); stroke-width: 2.2; }
+  .setsim .ss-venn .shade { fill: var(--ss-shade); transition: opacity 0.35s ease; }
+  .setsim .ss-venn .lab { fill: var(--ss-primary); font-family: "STIX Two Text", "Cambria Math", serif; font-style: italic; font-size: 20px; }
+  .setsim .ss-venn .lab.word { font-family: inherit; font-style: normal; font-size: 14px; font-weight: 700; }
+  .setsim .ss-venn .el { fill: var(--ss-muted); font-size: 19px; font-weight: 600; text-anchor: middle; dominant-baseline: central; transition: fill 0.3s; }
+  .setsim .ss-venn .el.on { fill: var(--ss-ink); font-weight: 800; }
+  .setsim .ss-venn .cnt { fill: var(--ss-ink); font-size: 20px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+  .setsim .ss-venn .cnt.new { fill: var(--ss-primary); }
+  .setsim .ss-result { margin-top: 0.5rem; padding: 0.6rem 0.8rem; border-radius: 0.55rem; background: var(--ss-soft); border: 1px solid var(--ss-line); min-height: 2.8rem; font-size: 0.98rem; }
+  .setsim .ss-result b { color: var(--ss-primary); }
+  .setsim .ss-hist { margin: 0.35rem 0 0; padding: 0; list-style: none; font-size: 0.88rem; color: var(--ss-muted); }
+  .setsim .ss-hist li.cur { color: var(--ss-ink); background: var(--ss-hl); border-radius: 0.3rem; padding: 0 0.3rem; margin-left: -0.3rem; }
+
+  .setsim .ss-stephead { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+  .setsim .ss-counter { font-size: 0.8rem; font-weight: 700; color: var(--ss-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .setsim .ss-switch { display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.88rem; cursor: pointer; }
+  .setsim .ss-switch input { accent-color: var(--ss-primary); width: 1rem; height: 1rem; }
+  .setsim .ss-chip { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--ss-primary-soft); color: var(--ss-primary); margin-bottom: 0.35rem; }
+  .setsim .ss-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 0.5rem; line-height: 1.35; }
+  .setsim .ss-row { display: grid; grid-template-columns: 4.6rem 1fr; gap: 0.5rem; padding: 0.35rem 0; border-top: 1px dashed var(--ss-line); font-size: 0.95rem; }
+  .setsim .ss-row > span:first-child { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ss-muted); padding-top: 0.15rem; }
+  .setsim .ss-write { background: var(--ss-hl); border-radius: 0.3rem; padding: 0 0.3rem; }
+  .setsim .ss-note { margin-top: 0.6rem; border-left: 4px solid var(--ss-good); background: var(--ss-good-soft); border-radius: 0.45rem; padding: 0.5rem 0.75rem; font-size: 0.93rem; }
+  .setsim .ss-note.warn { border-left-color: var(--ss-warn); background: var(--ss-warn-soft); }
+  .setsim .ss-note b { display: block; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .setsim .ss-list { margin: 0.3rem 0 0.4rem; padding-left: 1.2rem; }
+  .setsim .ss-list li { margin: 0.15rem 0; }
+
+  .setsim .ss-ask { margin-top: 0.4rem; border: 1px solid var(--ss-line); background: var(--ss-soft); border-radius: 0.6rem; padding: 0.75rem 0.9rem; }
+  .setsim .ss-ask .q { font-weight: 650; margin-bottom: 0.5rem; }
+  .setsim .ss-opts { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .setsim .ss-opt { font: inherit; padding: 0.4rem 0.75rem; border-radius: 0.5rem; border: 1px solid var(--ss-line); background: var(--ss-card); color: var(--ss-ink); cursor: pointer; }
+  .setsim .ss-opt:hover { border-color: var(--ss-primary); }
+  .setsim .ss-opt.wrong { text-decoration: line-through; color: var(--ss-bad); border-color: var(--ss-bad); background: var(--ss-bad-soft); cursor: default; }
+  .setsim .ss-hint { margin-top: 0.5rem; font-size: 0.9rem; color: var(--ss-bad); }
+
+  .setsim .ss-controls { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--ss-line); }
+  .setsim .ss-btn { font: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 0.5rem; border: 1px solid var(--ss-line); background: var(--ss-card); color: var(--ss-ink); cursor: pointer; line-height: 1.3; }
+  .setsim .ss-btn:hover { background: var(--ss-soft); }
+  .setsim .ss-btn:disabled { opacity: 0.45; cursor: default; }
+  .setsim .ss-primary { background: var(--ss-primary); border-color: var(--ss-primary); color: #fff; }
+  .setsim[data-theme="dark"] .ss-primary { color: #0b1220; }
+  .setsim .ss-primary:hover { background: var(--ss-primary); filter: brightness(0.93); }
+  .setsim .ss-ghost { background: transparent; white-space: nowrap; }
+  .setsim .ss-sm { font-size: 0.8rem; padding: 0.3rem 0.65rem; }
+  .setsim .ss-dots { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.7rem; }
+  .setsim .ss-dot { width: 1.7rem; height: 1.7rem; border-radius: 999px; border: 1px solid var(--ss-line); background: var(--ss-card); color: var(--ss-muted); font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0; }
+  .setsim .ss-dot.done { border-color: var(--ss-primary); color: var(--ss-primary); }
+  .setsim .ss-dot[aria-current="step"] { background: var(--ss-primary); border-color: var(--ss-primary); color: #fff; }
+  .setsim[data-theme="dark"] .ss-dot[aria-current="step"] { color: #0b1220; }
+
+  .setsim .ss-ref { margin-top: 1rem; border: 1px dashed var(--ss-line); border-radius: 0.6rem; padding: 0.6rem 0.9rem; }
+  .setsim .ss-ref summary { cursor: pointer; font-weight: 600; color: var(--ss-primary); }
+  .setsim .ss-table { width: 100%; border-collapse: collapse; margin-top: 0.6rem; font-size: 0.92rem; }
+  .setsim .ss-table th, .setsim .ss-table td { border: 1px solid var(--ss-line); padding: 0.35rem 0.6rem; text-align: left; vertical-align: top; }
+  .setsim .ss-table th { background: var(--ss-soft); }
+  @media (max-width: 640px) { .setsim .ss-top { flex-direction: column-reverse; align-items: stretch; } .setsim .ss-top #ss-theme { align-self: flex-end; } .setsim .ss-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 0.3rem; } .setsim .ss-tab { white-space: nowrap; flex: none; } }
+  @media (max-width: 560px) { .setsim .ss-table td.m { white-space: normal; } .setsim .ss-row { grid-template-columns: 1fr; gap: 0.1rem; } }
+</style>
+
+<script is:inline>
+(function () {
+  var root = document.getElementById("setsim");
+  if (!root) return;
+  var $ = function (s) { return root.querySelector(s); };
+
+  // ---------- small helpers ----------
+  function setOf(a) { return a.slice().sort(function (x, y) { return x - y; }); }
+  function fmt(a) { return "{" + setOf(a).join(", ") + "}"; }
+  function M(s) { return '<span class="m">' + s + "</span>"; }   // math-styled text
+  function S(a) { return M('<span class="up">' + (a.length ? fmt(a) : "∅") + "</span>"); }
+  function union(a, b) { return setOf(a.concat(b.filter(function (x) { return a.indexOf(x) < 0; }))); }
+  function inter(a, b) { return a.filter(function (x) { return b.indexOf(x) >= 0; }); }
+  function minus(a, b) { return a.filter(function (x) { return b.indexOf(x) < 0; }); }
+
+  // ---------- Venn geometry ----------
+  var GEO = {
+    2: { circles: { A: [150, 128, 88], B: [250, 128, 88] },
+         labels: { A: [72, 42], B: [328, 42] },
+         anchor: { A: [112, 128], AB: [200, 128], B: [288, 128], "": [368, 222] } },
+    3: { circles: { A: [165, 100, 72], B: [235, 100, 72], C: [200, 162, 72] },
+         labels: { A: [82, 40], B: [318, 40], C: [278, 236] },
+         anchor: { A: [130, 84], B: [270, 84], C: [200, 202], AB: [200, 72], AC: [160, 148], BC: [240, 148], ABC: [200, 122], "": [362, 226] } }
+  };
+  function offsets(k) { // positions for k labels around an anchor
+    var g = [[[0, 0]], [[-14, 0], [14, 0]], [[-16, -12], [16, -12], [0, 13]], [[-15, -12], [15, -12], [-15, 12], [15, 12]]];
+    return g[Math.min(k, 4) - 1] || g[3];
+  }
+  function regionOf(x, sets) { var r = ""; Object.keys(sets).forEach(function (k) { if (sets[k].indexOf(x) >= 0) r += k; }); return r; }
+
+  // ---------- the five examples ----------
+  // A step: { chip, title, look, write, say, why, warn, shade:[region codes], res:[elements] | cnt:{region:n},
+  //           hist: line for the result box, q: question, opts:[...], ans: index, hint }
+  var U1 = [1, 2, 3, 4, 5, 6, 7, 8], A1 = [1, 2, 3, 5], B1 = [2, 5, 6, 8];
+  var A2 = [1, 2, 3, 4, 5], B2 = [4, 5, 6, 7];
+  var U3 = [1, 2, 3, 4, 5, 6, 7, 8], A3 = [1, 2, 3, 4], B3 = [3, 4, 5, 6], C3 = [2, 4, 6, 8];
+  var AuB3 = union(A3, B3), Cc3 = minus(U3, C3), R3 = inter(AuB3, Cc3);
+
+  var CASES = [
+    { tab: "1 · Basic operations", sub: "Example 1", title: "Four operations on one diagram", n: 2,
+      U: U1, sets: { A: A1, B: B1 },
+      given: [["U", U1], ["A", A1], ["B", B1]],
+      steps: [
+        { plan: true, title: "Read the diagram first",
+          say: "Each number sits in every circle it belongs to. 2 and 5 are in both " + M("A") + " and " + M("B") + ", so they sit in the overlap. 4 and 7 are in neither set, so they sit outside both circles but inside " + M("U") + ".",
+          why: "Every operation below is just a choice of regions. Once you can read the regions, you can read the answer." },
+        { chip: "Union", title: "Find " + M("A ∪ B"), look: "everything inside circle " + M("A") + " or circle " + M("B"),
+          rule: M("A ∪ B") + " = elements in " + M("A") + ", in " + M("B") + ", or in both", shade: ["A", "AB", "B"], res: union(A1, B1), lhs: "A ∪ B",
+          say: "Collect every number inside at least one circle. 2 and 5 are written once, because a set has no repeats.",
+          q: "Which set is " + M("A ∪ B") + "?", opts: [union(A1, B1), A1.concat(B1), inter(A1, B1)], ans: 0, hint: "Union means “or”: in A, in B, or in both. Each element is written only once." },
+        { chip: "Intersection", title: "Find " + M("A ∩ B"), look: "only the overlap of the two circles",
+          rule: M("A ∩ B") + " = elements in both " + M("A") + " and " + M("B"), shade: ["AB"], res: inter(A1, B1), lhs: "A ∩ B",
+          say: "Only 2 and 5 are in both circles.",
+          q: "Which set is " + M("A ∩ B") + "?", opts: [union(A1, B1), inter(A1, B1), minus(A1, B1)], ans: 1, hint: "Intersection means “and”: the element must be in both sets." },
+        { chip: "Complement", title: "Find " + M("A′"), look: "everything in " + M("U") + " outside circle " + M("A"),
+          rule: M("A′") + " = elements in " + M("U") + " but not in " + M("A"), shade: ["B", ""], res: minus(U1, A1), lhs: "A′",
+          say: "Start from " + M("U") + " and remove 1, 2, 3, 5. What is left is 4, 6, 7, 8. Notice that 6 and 8 are inside " + M("B") + ", but they are still outside " + M("A") + ".",
+          q: "Which set is " + M("A′") + "?", opts: [[4, 7], minus(U1, A1), B1], ans: 1, hint: "The complement is everything in U that is not in A, including the parts of B outside A." },
+        { chip: "Difference", title: "Find " + M("A − B") + " and " + M("B − A"), look: "the part of circle " + M("A") + " that does not touch " + M("B"),
+          rule: M("A − B") + " = elements in " + M("A") + " but not in " + M("B"), shade: ["A"], res: minus(A1, B1), lhs: "A − B",
+          say: "Remove the overlap from " + M("A") + ": " + M("A − B") + " = " + S(minus(A1, B1)) + ". In the other direction, " + M("B − A") + " = " + S(minus(B1, A1)) + ".",
+          warn: "Order matters: " + M("A − B") + " and " + M("B − A") + " are different sets.",
+          q: "Which set is " + M("A − B") + "?", opts: [minus(B1, A1), minus(A1, B1), inter(A1, B1)], ans: 1, hint: "Start from A and throw away anything that is also in B." },
+        { end: true, title: "Summary",
+          list: [["A ∪ B", union(A1, B1)], ["A ∩ B", inter(A1, B1)], ["A′", minus(U1, A1)], ["A − B", minus(A1, B1)], ["B − A", minus(B1, A1)]],
+          say: "One diagram answers all of these. Each operation is a choice of regions: union takes everything in the circles, intersection only the overlap, complement everything outside one circle, and difference one circle minus the overlap." }
+      ] },
+
+    { tab: "2 · Symmetric difference", sub: "Example 2", title: "Symmetric difference, two ways", n: 2,
+      U: null, sets: { A: A2, B: B2 },
+      given: [["A", A2], ["B", B2]],
+      steps: [
+        { plan: true, title: "What is the plan?",
+          say: "The symmetric difference " + M("A Δ B") + " contains the elements that are in exactly one of the two sets. We will compute it with Formula 7 and then with Formula 8, and check that both give the same answer.",
+          why: M("A Δ B = (A − B) ∪ (B − A)") + "  (Formula 7)<br>" + M("A Δ B = (A ∪ B) − (A ∩ B)") + "  (Formula 8)" },
+        { chip: "Formula 7 · step 1", title: "Find " + M("A − B"), look: "circle " + M("A") + " without the overlap",
+          rule: "in " + M("A") + " but not in " + M("B"), shade: ["A"], res: minus(A2, B2), lhs: "A − B",
+          say: "4 and 5 are also in " + M("B") + ", so they are removed.",
+          q: "Which set is " + M("A − B") + "?", opts: [minus(A2, B2), minus(B2, A2), A2], ans: 0, hint: "Keep only the elements of A that are not in B." },
+        { chip: "Formula 7 · step 2", title: "Find " + M("B − A"), look: "circle " + M("B") + " without the overlap",
+          rule: "in " + M("B") + " but not in " + M("A"), shade: ["B"], res: minus(B2, A2), lhs: "B − A",
+          say: "Only 6 and 7 are in " + M("B") + " and not in " + M("A") + ".",
+          q: "Which set is " + M("B − A") + "?", opts: [inter(A2, B2), minus(B2, A2), B2], ans: 1, hint: "Now start from B and remove anything that is also in A." },
+        { chip: "Formula 7 · step 3", title: "Join them: " + M("(A − B) ∪ (B − A)"), look: "both “only” regions together",
+          rule: "union of the two differences", shade: ["A", "B"], res: union(minus(A2, B2), minus(B2, A2)), lhs: "A Δ B",
+          say: "Put the two results together: " + S(minus(A2, B2)) + " ∪ " + S(minus(B2, A2)) + ".",
+          q: "So " + M("A Δ B") + " is:", opts: [union(minus(A2, B2), minus(B2, A2)), union(A2, B2), inter(A2, B2)], ans: 0, hint: "Join the two sets you just found; the overlap is not included." },
+        { chip: "Formula 8 · step 1", title: "Second way: find " + M("A ∪ B"), look: "everything in either circle",
+          rule: "in " + M("A") + ", in " + M("B") + ", or in both", shade: ["A", "AB", "B"], res: union(A2, B2), lhs: "A ∪ B",
+          say: "Now we start again with the other formula. First take everything.",
+          q: "Which set is " + M("A ∪ B") + "?", opts: [union(A2, B2), A2.concat(B2), minus(A2, B2)], ans: 0, hint: "Every element of A or B, each written once." },
+        { chip: "Formula 8 · step 2", title: "Find " + M("A ∩ B"), look: "the overlap",
+          rule: "in both " + M("A") + " and " + M("B"), shade: ["AB"], res: inter(A2, B2), lhs: "A ∩ B",
+          say: "4 and 5 are the only shared elements.",
+          q: "Which set is " + M("A ∩ B") + "?", opts: [[4], inter(A2, B2), minus(B2, A2)], ans: 1, hint: "Which numbers appear in both lists?" },
+        { chip: "Formula 8 · step 3", title: "Remove the overlap: " + M("(A ∪ B) − (A ∩ B)"), look: "both circles, minus the overlap",
+          rule: "union minus intersection", shade: ["A", "B"], res: minus(union(A2, B2), inter(A2, B2)), lhs: "A Δ B",
+          say: "Take " + S(union(A2, B2)) + " and remove 4 and 5.",
+          q: "So " + M("A Δ B") + " is:", opts: [inter(A2, B2), minus(union(A2, B2), inter(A2, B2)), union(A2, B2)], ans: 1, hint: "Remove the shared elements from the union." },
+        { end: true, title: "Both formulas agree",
+          list: [["A Δ B (Formula 7)", union(minus(A2, B2), minus(B2, A2))], ["A Δ B (Formula 8)", minus(union(A2, B2), inter(A2, B2))]],
+          say: "Formula 7 collects the two “only” regions. Formula 8 takes everything and removes the overlap. Both shade the same region of the diagram, so they always give the same set." }
+      ] },
+
+    { tab: "3 · Combining operations", sub: "Example 3", title: "Compute (A ∪ B) ∩ C′ step by step", n: 3,
+      U: U3, sets: { A: A3, B: B3, C: C3 },
+      given: [["U", U3], ["A", A3], ["B", B3], ["C", C3]],
+      steps: [
+        { plan: true, title: "What is the plan?",
+          say: "As in arithmetic, we work inside the parentheses first. The expression " + M("(A ∪ B) ∩ C′") + " needs three small steps: the union, then the complement of " + M("C") + ", then the intersection of the two.",
+          why: "Writing each intermediate set down avoids most mistakes." },
+        { chip: "Step 1 · Union", title: "Parentheses first: " + M("A ∪ B"), look: "everything inside circle " + M("A") + " or circle " + M("B"),
+          rule: "in " + M("A") + ", in " + M("B") + ", or in both", shade: ["A", "B", "AB", "AC", "BC", "ABC"], res: AuB3, lhs: "A ∪ B",
+          say: "Collect every number in " + M("A") + " or " + M("B") + ". Ignore " + M("C") + " for now.",
+          q: "Which set is " + M("A ∪ B") + "?", opts: [AuB3, inter(A3, B3), union(AuB3, C3)], ans: 0, hint: "Use only A and B in this step." },
+        { chip: "Step 2 · Complement", title: "Find " + M("C′"), look: "everything in " + M("U") + " outside circle " + M("C"),
+          rule: "in " + M("U") + " but not in " + M("C"), shade: ["A", "B", "AB", ""], res: Cc3, lhs: "C′",
+          say: "Remove 2, 4, 6, 8 from " + M("U") + ".",
+          q: "Which set is " + M("C′") + "?", opts: [C3, Cc3, [7]], ans: 1, hint: "The complement is taken within U, so 7 is included." },
+        { chip: "Step 3 · Intersection", title: "Combine: " + M("(A ∪ B) ∩ C′"), look: "the part of " + M("A ∪ B") + " that is outside " + M("C"),
+          rule: "in both results", shade: ["A", "B", "AB"], res: R3, lhs: "(A ∪ B) ∩ C′",
+          say: "Keep the numbers that appear in both " + S(AuB3) + " and " + S(Cc3) + ".",
+          q: "So " + M("(A ∪ B) ∩ C′") + " is:", opts: [R3, union(AuB3, Cc3), [1, 3, 5, 7]], ans: 0, hint: "An element must be in A ∪ B and also outside C. 7 is outside C but not in A ∪ B." },
+        { end: true, title: "Result",
+          list: [["A ∪ B", AuB3], ["C′", Cc3], ["(A ∪ B) ∩ C′", R3]],
+          say: "Three small steps, each one an operation you already know. On the diagram, the answer is the part of circles " + M("A") + " and " + M("B") + " that lies outside circle " + M("C") + "." }
+      ] },
+
+    { tab: "4 · Counting two sets", sub: "Example 4 · Inclusion-Exclusion", title: "Math and Science students", n: 2, count: true,
+      names: { A: "Math", B: "Science" }, total: 100,
+      givenText: "100 students. 60 study Math, 45 study Science, 20 study both.",
+      steps: [
+        { plan: true, title: "How many study Math or Science?",
+          say: "We want " + M("|A ∪ B|") + ", where " + M("A") + " is the set of Math students and " + M("B") + " the set of Science students. We know " + M("|A|") + " = 60, " + M("|B|") + " = 45, and " + M("|A ∩ B|") + " = 20.",
+          why: "We will fill the diagram from the inside out, then check with the formula." },
+        { chip: "Common mistake", title: "Why not just add 60 + 45?", look: "the overlap",
+          shade: ["AB"], cnt: {}, hist: "60 + 45 = 105 (too many!)",
+          say: "60 + 45 = 105, but the class only has 100 students. The 20 students who study both were counted twice: once with Math and once with Science.",
+          warn: "Adding the sizes counts the overlap twice. We must subtract it once." },
+        { chip: "Fill the diagram", title: "Start in the middle: both subjects", look: "the overlap",
+          shade: ["AB"], cnt: { AB: 20 }, hist: "both: 20",
+          say: "20 students study both, so write 20 in the overlap first.",
+          q: "What number goes in the overlap?", opts: ["60", "20", "45"], ans: 1, hint: "The overlap holds the students who study both subjects." },
+        { chip: "Fill the diagram", title: "Only Math", look: "circle Math without the overlap",
+          shade: ["A"], cnt: { AB: 20, A: 40 }, hist: "only Math: 60 − 20 = 40",
+          say: "60 study Math in total, and 20 of them are already in the overlap. So 60 − 20 = 40 study only Math.",
+          q: "How many study only Math?", opts: ["60", "40", "80"], ans: 1, hint: "Subtract the students already written in the overlap." },
+        { chip: "Fill the diagram", title: "Only Science", look: "circle Science without the overlap",
+          shade: ["B"], cnt: { AB: 20, A: 40, B: 25 }, hist: "only Science: 45 − 20 = 25",
+          say: "45 study Science, 20 of them in the overlap, so 45 − 20 = 25 study only Science.",
+          q: "How many study only Science?", opts: ["25", "45", "20"], ans: 0, hint: "Same idea: total Science minus the overlap." },
+        { chip: "Formula 10", title: "Count the union", look: "both circles",
+          shade: ["A", "AB", "B"], cnt: { AB: 20, A: 40, B: 25 }, hist: "|A ∪ B| = 60 + 45 − 20 = 85",
+          say: "Inclusion-Exclusion: " + M("|A ∪ B| = |A| + |B| − |A ∩ B|") + " = 60 + 45 − 20 = 85. The diagram agrees: 40 + 20 + 25 = 85.",
+          q: "How many study Math or Science?", opts: ["105", "85", "65"], ans: 1, hint: "Add the two sizes, then subtract the overlap once." },
+        { chip: "Outside the circles", title: "Neither subject", look: "outside both circles",
+          shade: [""], cnt: { AB: 20, A: 40, B: 25, "": 15 }, hist: "neither: 100 − 85 = 15",
+          say: "The class has 100 students and 85 are inside the circles, so 100 − 85 = 15 study neither.",
+          q: "How many study neither subject?", opts: ["0", "15", "35"], ans: 1, hint: "Total students minus the students inside the circles." },
+        { chip: "Formula 11", title: "Exactly one subject", look: "both “only” regions",
+          shade: ["A", "B"], cnt: { AB: 20, A: 40, B: 25, "": 15 }, hist: "|A Δ B| = 60 + 45 − 2(20) = 65",
+          say: "For exactly one subject, remove the overlap from both sets: " + M("|A Δ B| = |A| + |B| − 2|A ∩ B|") + " = 60 + 45 − 40 = 65. The diagram agrees: 40 + 25 = 65.",
+          q: "How many study exactly one subject?", opts: ["65", "85", "45"], ans: 0, hint: "Only Math plus only Science." },
+        { end: true, title: "What we found",
+          lines: ["Math or Science: 85", "Neither: 15", "Exactly one subject: 65", "Both: 20"],
+          say: "Filling the diagram from the inside out (overlap first) turns every counting question into simple subtraction, and the formula gives the same answers." }
+      ] },
+
+    { tab: "5 · Counting three sets", sub: "Example 5 · Inclusion-Exclusion", title: "Three clubs", n: 3, count: true,
+      names: { A: "F", B: "B", C: "C" }, total: 40,
+      givenText: "40 students. Football (F) 20, badminton (B) 15, chess (C) 12. F and B: 6, F and C: 4, B and C: 5. All three: 2.",
+      steps: [
+        { plan: true, title: "How many join at least one club?",
+          say: "With three sets the trick is the same: start in the middle and work outward. Every pair number (6, 4, 5) already includes the 2 students in all three clubs.",
+          why: "Pattern of Formula 12: add the single sets, subtract the pairs, add back the triple." },
+        { chip: "Centre", title: "All three clubs", look: "the centre region",
+          shade: ["ABC"], cnt: { ABC: 2 }, hist: "all three: 2",
+          say: "2 students join all three clubs. Write 2 in the centre.",
+          q: "What goes in the centre?", opts: ["2", "6", "0"], ans: 0, hint: "The centre is inside all three circles." },
+        { chip: "Pairs", title: "Football and badminton only", look: "F ∩ B outside C",
+          shade: ["AB"], cnt: { ABC: 2, AB: 4 }, hist: "F and B only: 6 − 2 = 4",
+          say: "6 join football and badminton, but 2 of them are already in the centre. So 6 − 2 = 4.",
+          q: "How many join football and badminton but not chess?", opts: ["6", "4", "8"], ans: 1, hint: "The pair number includes the centre. Subtract it." },
+        { chip: "Pairs", title: "Football and chess only", look: "F ∩ C outside B",
+          shade: ["AC"], cnt: { ABC: 2, AB: 4, AC: 2 }, hist: "F and C only: 4 − 2 = 2",
+          say: "4 − 2 = 2 students join football and chess but not badminton.",
+          q: "How many join football and chess but not badminton?", opts: ["2", "4", "6"], ans: 0, hint: "Subtract the centre again." },
+        { chip: "Pairs", title: "Badminton and chess only", look: "B ∩ C outside F",
+          shade: ["BC"], cnt: { ABC: 2, AB: 4, AC: 2, BC: 3 }, hist: "B and C only: 5 − 2 = 3",
+          say: "5 − 2 = 3 students join badminton and chess but not football.",
+          q: "How many join badminton and chess but not football?", opts: ["5", "7", "3"], ans: 2, hint: "Pair number minus the centre." },
+        { chip: "Singles", title: "Football only", look: "circle F, nothing else",
+          shade: ["A"], cnt: { ABC: 2, AB: 4, AC: 2, BC: 3, A: 12 }, hist: "F only: 20 − 4 − 2 − 2 = 12",
+          say: "Football has 20. Subtract every number already inside circle F: 4, 2, and the centre 2. That leaves 20 − 4 − 2 − 2 = 12.",
+          q: "How many join only football?", opts: ["14", "12", "20"], ans: 1, hint: "Subtract all three numbers already inside the F circle." },
+        { chip: "Singles", title: "Badminton only", look: "circle B, nothing else",
+          shade: ["B"], cnt: { ABC: 2, AB: 4, AC: 2, BC: 3, A: 12, B: 6 }, hist: "B only: 15 − 4 − 3 − 2 = 6",
+          say: "15 − 4 − 3 − 2 = 6.",
+          q: "How many join only badminton?", opts: ["6", "9", "11"], ans: 0, hint: "Subtract 4, 3, and the centre from 15." },
+        { chip: "Singles", title: "Chess only", look: "circle C, nothing else",
+          shade: ["C"], cnt: { ABC: 2, AB: 4, AC: 2, BC: 3, A: 12, B: 6, C: 5 }, hist: "C only: 12 − 2 − 3 − 2 = 5",
+          say: "12 − 2 − 3 − 2 = 5.",
+          q: "How many join only chess?", opts: ["7", "3", "5"], ans: 2, hint: "Subtract 2, 3, and the centre from 12." },
+        { chip: "Formula 12", title: "At least one club", look: "all three circles",
+          shade: ["A", "B", "C", "AB", "AC", "BC", "ABC"], cnt: { ABC: 2, AB: 4, AC: 2, BC: 3, A: 12, B: 6, C: 5 }, hist: "|F ∪ B ∪ C| = 20 + 15 + 12 − 6 − 4 − 5 + 2 = 34",
+          say: "Formula 12: 20 + 15 + 12 − 6 − 4 − 5 + 2 = 34. The diagram agrees: 12 + 6 + 5 + 4 + 2 + 3 + 2 = 34.",
+          q: "How many join at least one club?", opts: ["47", "32", "34"], ans: 2, hint: "Add the singles, subtract the pairs, add the triple back." },
+        { chip: "Outside the circles", title: "No club", look: "outside all circles",
+          shade: [""], cnt: { ABC: 2, AB: 4, AC: 2, BC: 3, A: 12, B: 6, C: 5, "": 6 }, hist: "no club: 40 − 34 = 6",
+          say: "40 − 34 = 6 students join no club.",
+          q: "How many join no club?", opts: ["6", "0", "8"], ans: 0, hint: "Total minus the students inside the circles." },
+        { end: true, title: "What we found",
+          lines: ["At least one club: 34", "No club: 6", "All three clubs: 2"],
+          say: "Inside out works for three sets too: centre, then pairs, then singles. The formula adds the singles, subtracts the pairs, and adds back the triple, because the centre was subtracted once too often." }
+      ] }
+  ];
+
+  // ---------- state ----------
+  var ci = 0, si = 0, solved = {}, timer = null;
+  function key() { return ci + ":" + si; }
+  function guessing() { return $("#ss-guess").checked; }
+  function step() { return CASES[ci].steps[si]; }
+  function hidden(st) { return guessing() && st.q && !solved[key()]; }
+
+  // ---------- drawing ----------
+  var uid = 0;
+  function venn(c, st, hide) {
+    var g = GEO[c.n], id = "ss" + (++uid);
+    var keys = Object.keys(g.circles);
+    var defs = "";
+    keys.forEach(function (k) {
+      var q = g.circles[k];
+      defs += '<clipPath id="' + id + "c" + k + '"><circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + q[2] + '"/></clipPath>';
+    });
+    var shades = "";
+    var regions = (!hide && st.shade) ? st.shade : [];
+    regions.forEach(function (r, i) {
+      var inK = keys.filter(function (k) { return r.indexOf(k) >= 0; });
+      var outK = keys.filter(function (k) { return r.indexOf(k) < 0; });
+      var mid = id + "m" + i;
+      defs += '<mask id="' + mid + '"><rect x="0" y="0" width="400" height="260" fill="white"/>' +
+        outK.map(function (k) { var q = g.circles[k]; return '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="' + q[2] + '" fill="black"/>'; }).join("") + "</mask>";
+      var inner = '<rect class="shade" x="6" y="6" width="388" height="248" mask="url(#' + mid + ')"/>';
+      inK.forEach(function (k) { inner = '<g clip-path="url(#' + id + "c" + k + ')">' + inner + "</g>"; });
+      shades += inner;
+    });
+    var rings = keys.map(function (k) { var q = g.circles[k]; return '<circle class="ring" cx="' + q[0] + '" cy="' + q[1] + '" r="' + q[2] + '"/>'; }).join("");
+    var labs = keys.map(function (k) {
+      var p = g.labels[k], name = c.names ? c.names[k] : k, word = name.length > 1;
+      return '<text class="lab' + (word ? " word" : "") + '" x="' + p[0] + '" y="' + p[1] + '" text-anchor="middle">' + name + "</text>";
+    }).join("");
+    var body = "";
+    if (c.count) {
+      var cnt = (!hide && st.cnt) ? st.cnt : {};
+      var prev = si > 0 && c.steps[si - 1].cnt ? c.steps[si - 1].cnt : {};
+      Object.keys(cnt).forEach(function (r) {
+        var p = g.anchor[r];
+        body += '<text class="cnt' + (prev[r] === undefined ? " new" : "") + '" x="' + p[0] + '" y="' + p[1] + '">' + cnt[r] + "</text>";
+      });
+    } else {
+      var res = (!hide && st.res) ? st.res : null;
+      var byReg = {};
+      c.U ? c.U.forEach(function (x) { (byReg[regionOf(x, c.sets)] = byReg[regionOf(x, c.sets)] || []).push(x); })
+          : union(c.sets.A, c.sets.B).forEach(function (x) { (byReg[regionOf(x, c.sets)] = byReg[regionOf(x, c.sets)] || []).push(x); });
+      Object.keys(byReg).forEach(function (r) {
+        var p = g.anchor[r], o = offsets(byReg[r].length);
+        byReg[r].forEach(function (x, i) {
+          var on = res && res.indexOf(x) >= 0;
+          body += '<text class="el' + (on ? " on" : "") + '" x="' + (p[0] + o[i][0]) + '" y="' + (p[1] + o[i][1]) + '">' + x + "</text>";
+        });
+      });
+    }
+    return '<svg viewBox="0 0 400 260" role="img" aria-label="Venn diagram"><defs>' + defs + "</defs>" +
+      '<rect class="frame" x="6" y="6" width="388" height="248" rx="6"/>' +
+      '<text class="lab" x="22" y="30">U</text>' + shades + rings + labs + body + "</svg>";
+  }
+
+  function renderLeft() {
+    var c = CASES[ci], st = step(), hide = hidden(st);
+    $("#ss-case-sub").textContent = c.sub;
+    $("#ss-case-title").textContent = c.title;
+    $("#ss-given").innerHTML = c.given
+      ? c.given.map(function (p) { return "<span>" + M(p[0]) + " = " + S(p[1]) + "</span>"; }).join("")
+      : "<span>" + c.givenText + "</span>";
+    $("#ss-venn").innerHTML = venn(c, st, hide);
+    // result box: history of results up to this step
+    var items = [];
+    for (var k = 1; k <= si; k++) {
+      var s = c.steps[k];
+      if (s.end || s.plan) continue;
+      if (k === si && hide) { items.push('<li class="cur">' + (s.lhs ? M(s.lhs) + " = ?" : "?") + "</li>"); continue; }
+      var line = s.res ? M(s.lhs) + " = " + S(s.res) : s.hist;
+      items.push("<li" + (k === si ? ' class="cur"' : "") + ">" + line + "</li>");
+    }
+    $("#ss-result").innerHTML = items.length ? "<b>Results so far</b><ul class=\"ss-hist\">" + items.join("") + "</ul>"
+      : '<span style="color:var(--ss-muted)">Results will appear here as you step through.</span>';
+  }
+
+  function optLabel(o) { return Array.isArray(o) ? S(o) : o; }
+
+  function renderStep() {
+    var c = CASES[ci], st = step(), n = c.steps.length, html = "";
+    $("#ss-counter").textContent = si === 0 ? "Start" : "Step " + si + " of " + (n - 1);
+    if (st.plan) {
+      html = '<span class="ss-chip">Start here</span><h3 class="ss-title">' + st.title + "</h3><p>" + st.say + "</p>" +
+        (st.why ? '<div class="ss-note"><b>Tip</b>' + st.why + "</div>" : "");
+    } else if (st.end) {
+      var body = st.list ? '<ul class="ss-list">' + st.list.map(function (p) { return "<li>" + M(p[0]) + " = " + S(p[1]) + "</li>"; }).join("") + "</ul>"
+        : '<ul class="ss-list">' + st.lines.map(function (l) { return "<li>" + l + "</li>"; }).join("") + "</ul>";
+      html = '<span class="ss-chip">Done</span><h3 class="ss-title">' + st.title + "</h3>" + body + "<p>" + st.say + "</p>" +
+        (ci < CASES.length - 1 ? '<button type="button" class="ss-btn ss-primary" id="ss-nextcase">Next example: ' + CASES[ci + 1].tab.replace(/^\d+ · /, "") + " →</button>" : "<p><b>You have finished all five examples.</b></p>");
+    } else {
+      html = '<span class="ss-chip">' + st.chip + '</span><h3 class="ss-title">' + st.title + "</h3>" +
+        '<div class="ss-row"><span>Look at</span><span>' + st.look + "</span></div>" +
+        (st.rule ? '<div class="ss-row"><span>Rule</span><span>' + st.rule + "</span></div>" : "");
+      if (hidden(st)) {
+        html += '<div class="ss-ask"><div class="q">' + st.q + '</div><div class="ss-opts">' +
+          st.opts.map(function (o, i) { return '<button type="button" class="ss-opt" data-i="' + i + '">' + optLabel(o) + "</button>"; }).join("") +
+          '</div><div class="ss-hint" id="ss-hint" hidden></div></div>';
+      } else {
+        var w = st.res ? M(st.lhs) + " = " + S(st.res) : st.hist;
+        html += '<div class="ss-row"><span>Write</span><span><span class="ss-write">' + w + "</span></span></div>" +
+          '<div class="ss-row"><span>Why</span><span>' + st.say + "</span></div>" +
+          (st.warn ? '<div class="ss-note warn"><b>Watch out</b>' + st.warn + "</div>" : "");
+      }
+    }
+    $("#ss-step").innerHTML = html;
+    root.querySelectorAll(".ss-opt").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (+b.dataset.i === st.ans) { solved[key()] = true; render(); }
+        else { b.classList.add("wrong"); b.disabled = true; var h = $("#ss-hint"); h.hidden = false; h.textContent = "Not quite. " + st.hint; }
+      });
+    });
+    var nc = $("#ss-nextcase");
+    if (nc) nc.addEventListener("click", function () { pick(ci + 1); });
+    $("#ss-back").disabled = si === 0;
+    $("#ss-next").disabled = si === n - 1;
+    $("#ss-dots").innerHTML = c.steps.map(function (_, k) {
+      return '<button type="button" class="ss-dot' + (k < si ? " done" : "") + '"' + (k === si ? ' aria-current="step"' : "") + ' data-k="' + k + '" aria-label="Step ' + k + '">' + k + "</button>";
+    }).join("");
+    root.querySelectorAll(".ss-dot").forEach(function (d) { d.addEventListener("click", function () { stop(); si = +d.dataset.k; render(); }); });
+  }
+
+  function renderTabs() {
+    $("#ss-tabs").innerHTML = CASES.map(function (c, i) {
+      return '<button type="button" class="ss-tab"' + (i === ci ? ' aria-current="true"' : "") + ' data-i="' + i + '">' + c.tab + "</button>";
+    }).join("");
+    root.querySelectorAll(".ss-tab").forEach(function (t) { t.addEventListener("click", function () { pick(+t.dataset.i); }); });
+  }
+
+  function render() { renderTabs(); renderLeft(); renderStep(); }
+  function pick(i) { stop(); ci = i; si = 0; render(); try { history.replaceState(null, "", "#ex" + (i + 1)); } catch (e) {} }
+  function go(d) { var n = CASES[ci].steps.length; si = Math.max(0, Math.min(n - 1, si + d)); render(); }
+  function stop() { if (timer) { clearInterval(timer); timer = null; $("#ss-play").textContent = "▶ Play"; } }
+  function play() {
+    if (timer) { stop(); return; }
+    if (si === CASES[ci].steps.length - 1) si = 0;
+    $("#ss-guess").checked = false;
+    $("#ss-play").textContent = "❚❚ Pause";
+    render();
+    timer = setInterval(function () { if (si >= CASES[ci].steps.length - 1) { stop(); return; } go(1); }, 3000);
+  }
+
+  $("#ss-next").addEventListener("click", function () { stop(); go(1); });
+  $("#ss-back").addEventListener("click", function () { stop(); go(-1); });
+  $("#ss-restart").addEventListener("click", function () { stop(); si = 0; solved = {}; render(); });
+  $("#ss-play").addEventListener("click", play);
+  $("#ss-guess").addEventListener("change", function () { stop(); render(); });
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+    if (e.key === "ArrowRight") { stop(); go(1); }
+    if (e.key === "ArrowLeft") { stop(); go(-1); }
+  });
+  var themeBtn = $("#ss-theme");
+  themeBtn.addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") !== "dark";
+    root.setAttribute("data-theme", dark ? "dark" : "light");
+    themeBtn.textContent = dark ? "Light mode" : "Dark mode";
+  });
+
+  var m = /^#ex(\d)$/.exec(location.hash || "");
+  if (m && +m[1] >= 1 && +m[1] <= CASES.length) ci = +m[1] - 1;
+  render();
+})();
+</script>
