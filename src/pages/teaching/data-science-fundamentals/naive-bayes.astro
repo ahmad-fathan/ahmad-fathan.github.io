@@ -1,0 +1,39 @@
+---
+import Layout from "../../../components/Layout.astro";
+import PageHeader from "../../../components/PageHeader.astro";
+import NaiveBayesSim from "../../../components/simulations/NaiveBayesSim.astro";
+---
+
+<Layout
+  path="/teaching/data-science-fundamentals/naive-bayes"
+  title="Naïve Bayes Classifier: Interactive Simulation — Ahmad Fathan Hidayatullah"
+  description="Interactive, step-by-step simulation of Bayes' theorem and the Naïve Bayes classifier: spam example, Play Golf solver, Laplace smoothing, Gaussian Naïve Bayes, and practice questions."
+>
+  <PageHeader
+    eyebrow="Data Science Fundamentals · Classification"
+    title="Naïve Bayes Classifier"
+    lede="Learn the idea first, then watch it work on examples, then try it yourself. Every step is explained in plain words."
+  />
+
+  <div class="container-site py-10">
+    <nav class="mb-6 text-sm text-muted" aria-label="Breadcrumb">
+      <a href="/teaching" class="font-medium text-primary hover:text-primary-dark">Teaching</a>
+      <span class="mx-1.5">/</span>
+      <a href="/teaching/data-science-fundamentals" class="font-medium text-primary hover:text-primary-dark">Data Science Fundamentals</a>
+      <span class="mx-1.5">/</span>
+      <span>Naïve Bayes Classifier</span>
+    </nav>
+
+    <NaiveBayesSim />
+
+    <section class="mt-14 max-w-3xl">
+      <h2 class="text-xl font-bold tracking-tight">How to use this page</h2>
+      <ul class="mt-3 list-disc space-y-2 pl-6 text-muted marker:text-primary">
+        <li><b class="text-ink">Part A, Learn the idea</b>: five short theory pages, each ending with a quick check question. Tap any dotted word to see its meaning.</li>
+        <li><b class="text-ink">Part B, See it work</b>: four examples, from one clue (spam) to four clues (golf), the zero-count problem, and numeric clues.</li>
+        <li><b class="text-ink">Part C, Try it yourself</b>: practice questions on random days, with hints and full solutions.</li>
+        <li>Use the numbered circles at the top to jump to any page. Each page has its own link (for example <code>#b2</code> for the golf example), so you can share a specific page with students.</li>
+      </ul>
+    </section>
+  </div>
+</Layout>
