@@ -3,7 +3,14 @@ import Layout from "../components/Layout.astro";
 import PageHeader from "../components/PageHeader.astro";
 import TeachingGroups from "../components/TeachingGroups.astro";
 import { profiles } from "../config/site";
-import { simulations } from "../data/simulations";
+import { getEntry } from "astro:content";
+import { coursePages, simulationsFor } from "../data/simulations";
+
+const simCourses = (
+  await Promise.all(
+    coursePages.map(async (c) => ({ ...c, name: (await getEntry("teaching", c.courseId))?.data.name.en ?? c.slug, count: simulationsFor(c.courseId).length }))
+  )
+).filter((c) => c.count > 0);
 ---
 
 <Layout
@@ -19,23 +26,24 @@ import { simulations } from "../data/simulations";
 
   <div class="container-site py-14">
     <TeachingGroups lang="en" />
-    <section class="mt-12 rounded-xl border border-line bg-soft p-6 sm:p-8">
-      <p class="eyebrow">New</p>
-      <h2 class="mt-2 text-xl font-bold tracking-tight">Interactive Simulations</h2>
-      <p class="mt-2 max-w-2xl text-muted">
-        Step-by-step simulations of the methods taught in class, so students can replay each worked example at their own pace.
-      </p>
-      <ul class="mt-4 flex flex-wrap gap-2">
-        {simulations.map((s) => (
-          <li>
-            <a href={`/teaching/simulations/${s.slug}`} class="inline-flex rounded-full border border-line bg-paper px-3 py-1 text-sm font-medium text-ink hover:border-primary/50 hover:text-primary">
-              {s.title} <span class="ml-1.5 text-muted">· {s.course}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-      <a href="/teaching/simulations" class="btn btn-outline mt-5">All simulations →</a>
-    </section>
+    {simCourses.length > 0 && (
+      <section class="mt-12 rounded-xl border border-line bg-soft p-6 sm:p-8">
+        <p class="eyebrow">New</p>
+        <h2 class="mt-2 text-xl font-bold tracking-tight">Interactive Simulations</h2>
+        <p class="mt-2 max-w-2xl text-muted">
+          Some courses have step-by-step simulations of the methods taught in class. Click a course name above, or choose one here, to see its simulations by material.
+        </p>
+        <ul class="mt-4 flex flex-wrap gap-2">
+          {simCourses.map((c) => (
+            <li>
+              <a href={`/teaching/${c.slug}`} class="inline-flex rounded-full border border-line bg-paper px-3 py-1 text-sm font-medium text-ink hover:border-primary/50 hover:text-primary">
+                {c.name} <span class="ml-1.5 text-muted">· {c.count} {c.count === 1 ? "simulation" : "simulations"}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <p class="mt-10 text-sm text-muted">
       Teaching materials for several courses are shared on <a href={profiles.github} class="font-medium text-primary hover:text-primary-dark" target="_blank" rel="noopener noreferrer">GitHub</a>.
