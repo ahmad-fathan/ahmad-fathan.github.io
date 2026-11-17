@@ -28,11 +28,12 @@ export interface Simulation {
 
 export const coursePages: CoursePage[] = [
   { courseId: "fundamen-sains-data", slug: "data-science-fundamentals" },
+  { courseId: "fundamen-matematika", slug: "fundamentals-of-mathematics" },
 ];
 
 // Order in which materials are listed on a course page.
 // Materials not listed here appear after these, alphabetically.
-export const materialOrder: string[] = ["Classification"];
+export const materialOrder: string[] = ["Classification", "Set Theory"];
 
 export const simulations: Simulation[] = [
   {
@@ -43,6 +44,16 @@ export const simulations: Simulation[] = [
     summary:
       "A guided path in plain words: the theory first (probability, Bayes' theorem, the naive idea), then step-by-step examples (spam, Play Golf, Laplace smoothing, Gaussian NB), then practice questions with hints.",
     topics: ["Bayes' theorem", "Laplace smoothing", "Gaussian NB"],
+    updated: "2026-11",
+  },
+  {
+    slug: "sets",
+    courseId: "fundamen-matematika",
+    material: "Set Theory",
+    title: "Sets and Set Operations",
+    summary:
+      "Click through five worked examples on a Venn diagram: union, intersection, complement and difference, the symmetric difference two ways, a combined expression, and counting with Inclusion-Exclusion for two and three sets.",
+    topics: ["Venn diagrams", "Set operations", "Inclusion-Exclusion"],
     updated: "2026-11",
   },
 ];
