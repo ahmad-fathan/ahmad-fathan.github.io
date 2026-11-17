@@ -16,7 +16,7 @@ export const simulations: Simulation[] = [
     slug: "naive-bayes",
     title: "Naïve Bayes Classifier",
     summary:
-      "Step through Bayes' theorem and the Naïve Bayes classifier: a one-feature spam example, a five-step solver on the Play Golf dataset, Laplace smoothing, Gaussian Naïve Bayes, and practice questions.",
+      "A guided path in plain words: the theory first (probability, Bayes' theorem, the naive idea), then step-by-step examples (spam, Play Golf, Laplace smoothing, Gaussian NB), then practice questions with hints.",
     course: "Data Science Fundamentals",
     topics: ["Classification", "Bayes' theorem", "Laplace smoothing", "Gaussian NB"],
     updated: "2026-11",
