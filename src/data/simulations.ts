@@ -42,7 +42,7 @@ export const simulations: Simulation[] = [
     material: "Classification",
     title: "Naïve Bayes Classifier",
     summary:
-      "A guided path in plain words: the theory first (probability, Bayes' theorem, the naive idea), then step-by-step examples (spam, Play Golf, Laplace smoothing, Gaussian NB), then practice questions with hints.",
+      "The theory in plain words, then worked examples (spam, Play Golf, Laplace smoothing, Gaussian NB), then practice with hints.",
     topics: ["Bayes' theorem", "Laplace smoothing", "Gaussian NB"],
     updated: "2026-11",
   },
@@ -52,7 +52,7 @@ export const simulations: Simulation[] = [
     material: "Regression",
     title: "Regression, Cost and Gradient Descent",
     summary:
-      "Four connected sections on ten made-up students: fit a line with OLS, score it with a cost function, let gradient descent walk downhill, then turn a score into a pass/fail probability with logistic regression.",
+      "Fit a line with OLS, score it with a cost function, walk downhill with gradient descent, then predict pass/fail.",
     topics: ["Linear regression", "Cost function", "Gradient descent", "Logistic regression"],
     updated: "2026-11",
   },
@@ -62,7 +62,7 @@ export const simulations: Simulation[] = [
     material: "Evaluation",
     title: "Model Evaluation Practice",
     summary:
-      "Three exercises with a guess-first mode: read a confusion matrix and compute accuracy, precision, recall and F1; choose the right metric for three applications; diagnose overfitting and check a cross-validation mean.",
+      "Three guess-first exercises: confusion matrix metrics, choosing the right metric, and diagnosing overfitting.",
     topics: ["Confusion matrix", "Precision & recall", "F1-score", "Cross-validation"],
     updated: "2026-11",
   },
