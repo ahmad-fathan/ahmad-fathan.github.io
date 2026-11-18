@@ -1,0 +1,31 @@
+---
+import Layout from "../../../components/Layout.astro";
+import PageHeader from "../../../components/PageHeader.astro";
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+  const courses = await getCollection("teaching");
+  return courses
+    .filter((c) => c.data.repoUrl)
+    .map((c) => ({ params: { id: c.id.replace(/\.md$/, "") }, props: { course: c } }));
+}
+
+const { course } = Astro.props;
+const repoUrl = course.data.repoUrl!;
+---
+
+<Layout
+  path={`/teaching/repository/${course.id.replace(/\.md$/, "")}`}
+  title={`${course.data.name.en} — Source Code`}
+  description={repoUrl}
+>
+  <PageHeader eyebrow="Course repository" title={course.data.name.en} lede="Source code for all modules in this course." />
+
+  <div class="container-site py-14">
+    <a href={repoUrl} target="_blank" rel="noopener noreferrer" class="btn btn-primary">Open on GitHub</a>
+    <p class="mt-4 break-all text-sm text-muted">{repoUrl}</p>
+    <p class="mt-8 text-sm text-muted">
+      <a href="/teaching" class="font-medium text-primary hover:text-primary-dark">← Back to Teaching</a>
+    </p>
+  </div>
+</Layout>

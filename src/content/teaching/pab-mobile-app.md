@@ -16,4 +16,5 @@ jenjang: "S1"
 kelas: "B"
 sks: 4.0
 fakultasProdi: "FTI - Informatika"
+repoUrl: "https://github.com/ahmad-fathan/Mobile-App-Development-with-Kotlin/tree/main"
 ---

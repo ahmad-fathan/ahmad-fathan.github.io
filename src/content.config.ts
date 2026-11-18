@@ -19,6 +19,7 @@ const teaching = defineCollection({
     kelas: z.string().optional(),
     sks: z.number().optional(),
     fakultasProdi: z.string().optional(),
+    repoUrl: z.string().url().optional(),
   }),
 });
 

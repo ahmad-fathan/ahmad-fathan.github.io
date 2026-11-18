@@ -41,4 +41,7 @@ const jenjangLabel = (code: string) =>
       {simCount} interactive {simCount === 1 ? "simulation" : "simulations"}
     </a>
   )}
+  {data.repoUrl && (
+    <a href={`/teaching/repository/${entry.id.replace(/\.md$/, "")}`} class="text-sm font-medium text-primary hover:text-primary-dark">· Source code</a>
+  )}
 </li>
