@@ -1,0 +1,1107 @@
+---
+// Regression laboratory: one page, four sections.
+//   1. Linear regression  — pick a line, see the residuals, fit with OLS.
+//   2. Cost function      — turn the residuals into one number (J = MSE / 2).
+//   3. Gradient descent   — update both parameters from the gradients, step by step.
+//   4. Logistic regression— squeeze a linear score into a probability, then a class.
+// Data: ten made-up students, hours studied (1-10) and an exam score (0-100).
+// The first three sections share the same scores; section 4 has its own pass/fail labels.
+// Everything runs in the browser, no network, no dependency.
+---
+
+<div class="regsim" id="regsim">
+  <nav class="rs-tabs" id="rs-tabs" role="tablist" aria-label="Section"></nav>
+
+  <!-- ============ 1. LINEAR REGRESSION ============ -->
+  <section class="rs-panel" id="rs-linear" role="tabpanel">
+    <p class="rs-lede">
+      A line predicts one number from another: <b>score ≈ b₀ + b₁ × hours</b>.
+      Move the two sliders and watch the line and its errors change.
+    </p>
+
+    <div class="rs-grid">
+      <div class="rs-side">
+        <div class="rs-card">
+          <p class="rs-eyebrow">Step 1 · The data</p>
+          <h3 class="rs-h3">Ten students</h3>
+          <p class="rs-small">Hours of self-study in the week before the exam. Edit a score to see what happens.</p>
+          <table class="rs-table" id="lin-data-table"></table>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Step 2 · Try a line</p>
+          <label class="rs-label" for="lin-b0">Intercept b₀ <b id="lin-b0-v"></b></label>
+          <input id="lin-b0" type="range" min="0" max="100" step="0.1">
+          <label class="rs-label" for="lin-b1">Slope b₁ <b id="lin-b1-v"></b></label>
+          <input id="lin-b1" type="range" min="-10" max="15" step="0.01">
+          <button type="button" class="rs-btn rs-primary" id="lin-fit">Find the best line (OLS)</button>
+          <label class="rs-check"><input type="checkbox" id="lin-res" checked> Show residuals</label>
+          <p class="rs-msg" id="lin-msg" role="status"></p>
+          <p class="rs-note">Moving a slider means guessing a line. OLS picks the line with the smallest sum of squared residuals.</p>
+        </div>
+      </div>
+
+      <div class="rs-main">
+        <div class="rs-card">
+          <p class="rs-eyebrow">Live chart</p>
+          <h3 class="rs-h3" id="lin-eq"></h3>
+          <div class="rs-stats" id="lin-stats"></div>
+          <div class="rs-chart" id="lin-chart"></div>
+          <p class="rs-small">Each dotted vertical line is one residual: the gap between the real score and the prediction.</p>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Step 3 · Predict a new student</p>
+          <label class="rs-label" for="lin-x">Hours studied <b id="lin-x-v"></b></label>
+          <input id="lin-x" type="range" min="0" max="12" step="0.1" value="7.5">
+          <p class="rs-result" id="lin-pred" aria-live="polite"></p>
+          <p class="rs-small" id="lin-sub"></p>
+          <p class="rs-warn rs-off" id="lin-warn"></p>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Step 4 · Do the maths by hand</p>
+          <div class="rs-stepnav">
+            <h3 class="rs-h3">Follow the six steps</h3>
+            <div>
+              <button type="button" class="rs-btn rs-sm" id="lin-prev">← Back</button>
+              <button type="button" class="rs-btn rs-primary rs-sm" id="lin-next">Next →</button>
+            </div>
+          </div>
+          <div class="rs-dots" id="lin-dots"></div>
+          <div class="rs-step" id="lin-step" aria-live="polite"></div>
+          <details class="rs-details">
+            <summary>Full working table</summary>
+            <div id="lin-helper"></div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. COST FUNCTION ============ -->
+  <section class="rs-panel rs-off" id="rs-cost" role="tabpanel">
+    <p class="rs-lede">
+      A cost function turns all the errors into <b>one number</b>. Smaller is better.
+      Here the cost is <b>J = MSE / 2</b>; the ½ only makes the derivative tidier.
+    </p>
+
+    <div class="rs-grid">
+      <div class="rs-side">
+        <div class="rs-card">
+          <p class="rs-eyebrow">The data</p>
+          <h3 class="rs-h3">Hours and scores</h3>
+          <p class="rs-small">The same ten students as the first section. A score you edit here is carried over.</p>
+          <table class="rs-table" id="cost-data-table"></table>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Try a different line</p>
+          <label class="rs-label" for="cost-b0">Intercept b₀ <b id="cost-b0-v"></b></label>
+          <input id="cost-b0" type="range" min="0" max="90" step="0.1" value="20">
+          <label class="rs-label" for="cost-b1">Slope b₁ <b id="cost-b1-v"></b></label>
+          <input id="cost-b1" type="range" min="-5" max="15" step="0.01" value="2">
+          <button type="button" class="rs-btn rs-primary" id="cost-fit">Compare with the OLS line</button>
+          <button type="button" class="rs-btn" id="cost-send">Use this line to start gradient descent →</button>
+          <p class="rs-small">The sliders only move a trial line. Nothing has been learned yet.</p>
+        </div>
+      </div>
+
+      <div class="rs-main">
+        <div class="rs-card">
+          <p class="rs-eyebrow">Line and residuals</p>
+          <h3 class="rs-h3" id="cost-eq"></h3>
+          <div class="rs-stats" id="cost-stats"></div>
+          <div class="rs-chart" id="cost-chart"></div>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Shape of the cost</p>
+          <h3 class="rs-h3">What if only the slope changes?</h3>
+          <p class="rs-small">The intercept is held at its current value. The orange dot is where we are now. This is one slice of the cost, not the whole surface.</p>
+          <div class="rs-chart" id="cost-slice"></div>
+          <p class="rs-hint" id="cost-slice-note"></p>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Do the maths by hand</p>
+          <h3 class="rs-h3">From residuals to one cost value</h3>
+          <div class="rs-formula" id="cost-formula"></div>
+          <p class="rs-small">Residual = actual − predicted. Squaring keeps positive and negative errors from cancelling out.</p>
+          <div class="rs-scroll" id="cost-table"></div>
+          <p class="rs-hint" id="cost-answer"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. GRADIENT DESCENT ============ -->
+  <section class="rs-panel rs-off" id="rs-gd" role="tabpanel">
+    <p class="rs-lede">
+      Gradient descent takes small steps downhill on the cost. Each step reads the gradient of
+      both parameters and updates them <b>at the same time</b>.
+    </p>
+
+    <div class="rs-grid">
+      <div class="rs-side">
+        <div class="rs-card">
+          <p class="rs-eyebrow">Training settings</p>
+          <label class="rs-label" for="gd-start-b0">Starting intercept b₀</label>
+          <input class="rs-num" id="gd-start-b0" type="number" value="20" min="-100" max="100" step="0.1">
+          <label class="rs-label" for="gd-start-b1">Starting slope b₁</label>
+          <input class="rs-num" id="gd-start-b1" type="number" value="2" min="-20" max="20" step="0.1">
+          <label class="rs-label" for="gd-alpha">Learning rate α</label>
+          <select class="rs-select" id="gd-alpha">
+            <option value="0.001">0.001 · very small</option>
+            <option value="0.01">0.01 · small</option>
+            <option value="0.03" selected>0.03 · fits this data</option>
+            <option value="0.05">0.05 · close to the limit</option>
+            <option value="0.1">0.1 · deliberately too big</option>
+          </select>
+          <label class="rs-label" for="gd-speed">Steps per view</label>
+          <select class="rs-select" id="gd-speed">
+            <option value="1">1 · one at a time</option>
+            <option value="10" selected>10 · medium</option>
+            <option value="50">50 · fast</option>
+          </select>
+          <div class="rs-btnrow">
+            <button type="button" class="rs-btn" id="gd-restart">Restart</button>
+            <button type="button" class="rs-btn rs-primary" id="gd-step">One step</button>
+            <button type="button" class="rs-btn rs-primary" id="gd-run">▶ Run</button>
+          </div>
+          <p class="rs-msg" id="gd-msg" role="status"></p>
+          <p class="rs-note">No feature scaling here. A safe learning rate depends on the scale of the data, so 0.03 is not a general rule.</p>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">The exact answer</p>
+          <div class="rs-best" id="gd-best"></div>
+          <p class="rs-small">OLS jumps straight to the minimum. Gradient descent walks towards it.</p>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">One step, in order</p>
+          <ol class="rs-list">
+            <li>Predict every point.</li>
+            <li>Compute the error and both gradients.</li>
+            <li>Update b₀ and b₁ at the same time.</li>
+            <li>Compute the new cost.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="rs-main">
+        <div class="rs-card">
+          <p class="rs-eyebrow">Live training</p>
+          <div class="rs-stats" id="gd-stats"></div>
+          <h3 class="rs-h3" id="gd-eq"></h3>
+          <div class="rs-chart" id="gd-chart"></div>
+        </div>
+
+        <div class="rs-two">
+          <div class="rs-card">
+            <h3 class="rs-h3">Cost over the steps</h3>
+            <p class="rs-small">The vertical axis shows log₁₀(1 + J), so big and small changes stay visible.</p>
+            <div class="rs-chart" id="gd-history"></div>
+          </div>
+          <div class="rs-card">
+            <h3 class="rs-h3">The walk through parameter space</h3>
+            <p class="rs-small">Darker means a lower cost. The orange line is the walk; the + is the OLS answer.</p>
+            <div class="rs-chart" id="gd-map"></div>
+            <p class="rs-small" id="gd-map-note"></p>
+          </div>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">The last update</p>
+          <h3 class="rs-h3" id="gd-iter-title">No update yet</h3>
+          <div id="gd-iter"><p>Press “One step” to see the full arithmetic.</p></div>
+          <details class="rs-details">
+            <summary>All ten samples, before the last update</summary>
+            <div class="rs-scroll" id="gd-table"></div>
+          </details>
+        </div>
+
+        <div class="rs-card">
+          <h3 class="rs-h3">What to look for</h3>
+          <p class="rs-small">Start with α = 0.03. Try 0.001 to see very slow steps. Then restart with 0.1 and watch the cost grow as the parameters bounce. When the scores change, both the OLS answer and the safe learning rate can change too.</p>
+          <p class="rs-note">All ten samples are used for training. A falling training cost does not prove the model works on new data.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. LOGISTIC REGRESSION ============ -->
+  <section class="rs-panel rs-off" id="rs-logistic" role="tabpanel">
+    <p class="rs-lede">
+      Logistic regression answers a yes/no question. It turns a straight-line score into a
+      <b>probability</b>, then compares that probability with a threshold.
+    </p>
+
+    <div class="rs-grid">
+      <div class="rs-side">
+        <div class="rs-card">
+          <p class="rs-eyebrow">The data</p>
+          <h3 class="rs-h3">Ten pass/fail labels</h3>
+          <p class="rs-small">1 = passed, 0 = did not pass. The pattern is deliberately imperfect: study hours are not the only reason someone passes.</p>
+          <table class="rs-table" id="log-data-table"></table>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Weights and decision</p>
+          <label class="rs-label" for="log-w">Weight w <b id="log-w-v"></b></label>
+          <input id="log-w" type="range" min="-3" max="3" step="0.001">
+          <label class="rs-label" for="log-b">Bias b <b id="log-b-v"></b></label>
+          <input id="log-b" type="range" min="-15" max="15" step="0.001">
+          <label class="rs-label" for="log-t">Threshold τ <b id="log-t-v"></b></label>
+          <input id="log-t" type="range" min="0.05" max="0.95" step="0.01" value="0.5">
+          <button type="button" class="rs-btn rs-primary" id="log-fit">Train on the ten samples</button>
+          <p class="rs-msg" id="log-msg" role="status"></p>
+          <p class="rs-note">The threshold changes the decision, not the probability.</p>
+        </div>
+      </div>
+
+      <div class="rs-main">
+        <div class="rs-card">
+          <p class="rs-eyebrow">The sigmoid curve</p>
+          <h3 class="rs-h3" id="log-eq"></h3>
+          <div class="rs-stats" id="log-stats"></div>
+          <div class="rs-chart" id="log-chart"></div>
+          <p class="rs-small">Points sit at label 0 or 1. The curve shows a probability, not an exam score.</p>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Predict a new student</p>
+          <label class="rs-label" for="log-x">Hours studied <b id="log-x-v"></b></label>
+          <input id="log-x" type="range" min="0" max="12" step="0.1" value="7">
+          <p class="rs-result" id="log-pred" aria-live="polite"></p>
+          <p class="rs-small" id="log-sub"></p>
+          <p class="rs-hint" id="log-read"></p>
+          <p class="rs-warn rs-off" id="log-warn"></p>
+        </div>
+
+        <div class="rs-card">
+          <p class="rs-eyebrow">Do the maths by hand</p>
+          <div class="rs-stepnav">
+            <h3 class="rs-h3">Follow the six steps</h3>
+            <div>
+              <button type="button" class="rs-btn rs-sm" id="log-prev">← Back</button>
+              <button type="button" class="rs-btn rs-primary rs-sm" id="log-next">Next →</button>
+            </div>
+          </div>
+          <div class="rs-dots" id="log-dots"></div>
+          <div class="rs-step" id="log-step" aria-live="polite"></div>
+          <details class="rs-details">
+            <summary>Compare every prediction with the real label</summary>
+            <div class="rs-scroll" id="log-helper"></div>
+            <p class="rs-small">This measures the training data only. It does not show how the model behaves on new students.</p>
+          </details>
+        </div>
+
+        <div class="rs-card">
+          <details class="rs-details">
+            <summary>How are the weights learned? Try one gradient descent step.</summary>
+            <div class="rs-learn">
+              <p class="rs-small">For the average log loss: gradient of w = mean((p − y) × x); gradient of b = mean(p − y). Both change together, with learning rate 0.01.</p>
+              <button type="button" class="rs-btn" id="log-zero">Start from w = 0, b = 0</button>
+              <button type="button" class="rs-btn rs-primary" id="log-gd">Run one step</button>
+              <p class="rs-msg" id="log-gd-out" role="status">Press start, then watch the curve and the log loss change.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="rs-foot">
+    Made-up data, ten samples per method, every calculation runs on your device.
+    Nothing is saved when you close the page.
+  </p>
+</div>
+
+<style is:global>
+  .regsim {
+    --rs-bg: #ffffff; --rs-card: #ffffff; --rs-soft: #f8fafc; --rs-ink: #0f172a; --rs-muted: #5b6573;
+    --rs-line: #e2e8f0; --rs-primary: #2563eb; --rs-primary-soft: #eff6ff; --rs-data: #0f172a;
+    --rs-hl: #fef9c3; --rs-bad: #dc2626; --rs-bad-soft: #fef2f2; --rs-good: #16a34a;
+    --rs-good-soft: #f0fdf4; --rs-warn: #d97706; --rs-warn-soft: #fff7ed; --rs-orange: #ea580c;
+    color: var(--rs-ink); font-size: 1rem; line-height: 1.6;
+  }
+  .regsim[data-theme="dark"] {
+    --rs-bg: #0b1220; --rs-card: #111a2e; --rs-soft: #16213a; --rs-ink: #e5e9f0; --rs-muted: #9aa6b8;
+    --rs-line: #26324a; --rs-primary: #60a5fa; --rs-primary-soft: #172554; --rs-data: #e5e9f0;
+    --rs-hl: #3a3410; --rs-bad: #f87171; --rs-bad-soft: #2a1414; --rs-good: #4ade80;
+    --rs-good-soft: #10261a; --rs-warn: #fbbf24; --rs-warn-soft: #2a2110; --rs-orange: #fb923c;
+  }
+  .regsim *, .regsim *::before, .regsim *::after { box-sizing: border-box; }
+  .regsim p { margin: 0 0 0.6rem; }
+  .regsim p:last-child { margin-bottom: 0; }
+  .regsim b { font-weight: 700; }
+
+  .regsim .rs-top { display: flex; justify-content: flex-end; margin-bottom: 0.75rem; }
+  .regsim .rs-tabs { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.1rem; }
+  .regsim .rs-tab {
+    font: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 0.55rem;
+    border: 1px solid var(--rs-line); background: var(--rs-card); color: var(--rs-muted); cursor: pointer;
+  }
+  .regsim .rs-tab:hover { border-color: var(--rs-primary); color: var(--rs-primary); }
+  .regsim .rs-tab[aria-selected="true"] { background: var(--rs-primary); border-color: var(--rs-primary); color: #fff; }
+  .regsim[data-theme="dark"] .rs-tab[aria-selected="true"] { color: #0b1220; }
+
+  .regsim .rs-lede { font-size: 1.02rem; color: var(--rs-muted); margin-bottom: 1.1rem; }
+  .regsim .rs-lede b { color: var(--rs-ink); }
+  .regsim .rs-grid { display: grid; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+  .regsim .rs-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+  .regsim .rs-side > *, .regsim .rs-main > *, .regsim .rs-two > * { margin-bottom: 1rem; }
+  .regsim .rs-side > *:last-child, .regsim .rs-main > *:last-child { margin-bottom: 0; }
+  .regsim .rs-card { background: var(--rs-card); border: 1px solid var(--rs-line); border-radius: 0.8rem; padding: 1rem 1.1rem; min-width: 0; }
+  .regsim .rs-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rs-primary); margin-bottom: 0.25rem; }
+  .regsim .rs-h3 { font-size: 1.12rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 0.4rem; line-height: 1.35; }
+  .regsim .rs-small { font-size: 0.86rem; color: var(--rs-muted); }
+  .regsim .rs-off { display: none !important; }
+
+  .regsim .rs-label { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.9rem; margin: 0.85rem 0 0.3rem; }
+  .regsim .rs-label b { color: var(--rs-primary); font-variant-numeric: tabular-nums; }
+  .regsim input[type="range"] { width: 100%; accent-color: var(--rs-primary); cursor: pointer; }
+  .regsim input[type="number"], .regsim select {
+    font: inherit; font-size: 0.9rem; width: 100%; padding: 0.35rem 0.5rem; border-radius: 0.4rem;
+    border: 1px solid var(--rs-line); background: var(--rs-card); color: var(--rs-ink);
+  }
+  .regsim .rs-num { max-width: 8rem; }
+  .regsim .rs-check { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; margin-top: 0.7rem; }
+  .regsim .rs-btn {
+    font: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.45rem 0.85rem; border-radius: 0.5rem;
+    border: 1px solid var(--rs-line); background: var(--rs-card); color: var(--rs-ink); cursor: pointer;
+  }
+  .regsim .rs-btn:hover { border-color: var(--rs-primary); }
+  .regsim .rs-btn.rs-primary { background: var(--rs-primary); border-color: var(--rs-primary); color: #fff; margin-top: 0.7rem; }
+  .regsim .rs-btn.rs-primary:hover { filter: brightness(1.06); }
+  .regsim .rs-btn.rs-sm { font-size: 0.82rem; padding: 0.3rem 0.6rem; }
+  .regsim .rs-btn:disabled { opacity: 0.45; cursor: default; }
+  .regsim .rs-btnrow { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.9rem; }
+  .regsim .rs-btnrow .rs-btn.rs-primary { margin-top: 0; }
+
+  .regsim .rs-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+  .regsim .rs-table th { text-align: right; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rs-muted); padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--rs-line); }
+  .regsim .rs-table th:first-child, .regsim .rs-table td:first-child { text-align: left; }
+  .regsim .rs-table td { padding: 0.3rem 0.35rem; border-bottom: 1px solid var(--rs-line); text-align: right; }
+  .regsim .rs-table tr:last-child td { border-bottom: 0; }
+  .regsim .rs-table input[type="number"] { width: 4.2rem; max-width: 100%; }
+  .regsim .rs-table select { width: 3.6rem; }
+  .regsim .rs-table tfoot td { font-weight: 700; background: var(--rs-soft); }
+  .regsim .rs-table tr.bad td { background: var(--rs-bad-soft); }
+
+  .regsim .rs-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin: 0.5rem 0 0.75rem; }
+  .regsim .rs-stat { background: var(--rs-soft); border-radius: 0.55rem; padding: 0.5rem 0.6rem; }
+  .regsim .rs-stat span { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rs-muted); }
+  .regsim .rs-stat strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+  .regsim .rs-chart svg { display: block; width: 100%; height: auto; }
+  .regsim .rs-result { font-size: 1.5rem; font-weight: 700; color: var(--rs-primary); font-variant-numeric: tabular-nums; margin: 0.7rem 0 0.3rem; }
+  .regsim .rs-msg { font-size: 0.82rem; color: var(--rs-primary); min-height: 1.3rem; margin: 0.55rem 0 0; }
+  .regsim .rs-note { font-size: 0.84rem; border-left: 3px solid var(--rs-line); padding-left: 0.7rem; color: var(--rs-muted); margin-top: 0.7rem; }
+  .regsim .rs-hint { font-size: 0.86rem; background: var(--rs-primary-soft); border-radius: 0.5rem; padding: 0.55rem 0.75rem; margin-top: 0.6rem; }
+  .regsim .rs-warn { font-size: 0.84rem; background: var(--rs-warn-soft); border-left: 3px solid var(--rs-warn); border-radius: 0 0.4rem 0.4rem 0; padding: 0.55rem 0.7rem; margin-top: 0.6rem; }
+
+  .regsim .rs-stepnav { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  .regsim .rs-stepnav .rs-h3 { margin: 0; }
+  .regsim .rs-dots { display: flex; gap: 0.3rem; margin-bottom: 0.75rem; }
+  .regsim .rs-dots i { flex: 1; height: 4px; border-radius: 4px; background: var(--rs-line); }
+  .regsim .rs-dots i.on { background: var(--rs-primary); }
+  .regsim .rs-step { min-height: 12rem; }
+  .regsim .rs-step .rs-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; background: var(--rs-primary); color: #fff; border-radius: 0.3rem; padding: 0.12rem 0.45rem; margin-bottom: 0.4rem; }
+  .regsim[data-theme="dark"] .rs-step .rs-badge { color: #0b1220; }
+  .regsim .rs-formula { background: var(--rs-soft); border-radius: 0.55rem; padding: 0.7rem 0.85rem; margin: 0.6rem 0; font-family: "STIX Two Text", "Cambria Math", "Times New Roman", serif; font-size: 1.02rem; overflow-x: auto; }
+  .regsim .rs-formula .rs-frac { display: inline-flex; flex-direction: column; text-align: center; vertical-align: middle; margin: 0 0.15rem; line-height: 1.15; }
+  .regsim .rs-formula .rs-frac > span:first-child { border-bottom: 1.5px solid currentColor; padding: 0 0.25rem 0.1rem; }
+  .regsim .rs-formula .rs-frac > span:last-child { padding-top: 0.1rem; }
+  .regsim .rs-details { margin-top: 0.9rem; border-top: 1px solid var(--rs-line); padding-top: 0.7rem; }
+  .regsim .rs-details summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+  .regsim .rs-scroll { overflow-x: auto; margin-top: 0.6rem; }
+  .regsim .rs-list { margin: 0.3rem 0 0; padding-left: 1.1rem; font-size: 0.9rem; }
+  .regsim .rs-list li { margin: 0.15rem 0; }
+  .regsim .rs-best { font-size: 0.92rem; line-height: 1.8; font-variant-numeric: tabular-nums; }
+  .regsim .rs-best b { color: var(--rs-primary); }
+
+  .regsim .rs-foot { font-size: 0.8rem; color: var(--rs-muted); margin-top: 1.1rem; }
+
+  @media (max-width: 900px) {
+    .regsim .rs-grid, .regsim .rs-two { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .regsim .rs-card { padding: 0.75rem 0.8rem; }
+    .regsim .rs-stats { grid-template-columns: 1fr 1fr; }
+    .regsim .rs-result { font-size: 1.3rem; }
+  }
+</style>
+
+<script is:inline>
+  // Regression laboratory. Pure browser JavaScript so Astro ships no framework here.
+  (function () {
+    var root = document.getElementById("regsim");
+    if (!root) return;
+
+    var $ = function (id) { return document.getElementById(id); };
+    var nf = function (v, d) {
+      if (d === undefined) d = 4;
+      if (!isFinite(v)) return "—";
+      if (Math.abs(v) >= 1e7) return v.toExponential(3);
+      return v.toLocaleString("en-US", { maximumFractionDigits: d === undefined ? 4 : d });
+    };
+    var sig = function (z) { return z >= 0 ? 1 / (1 + Math.exp(-z)) : Math.exp(z) / (1 + Math.exp(z)); };
+    var fr = function (a, b) { return '<span class="rs-frac"><span>' + a + '</span><span>' + b + '</span></span>'; };
+
+    // ---------- shared data ----------
+    var ORIGINAL_Y = [48, 53, 59, 61, 67, 71, 75, 82, 84, 90];
+    var ORIGINAL_LABELS = [0, 0, 0, 1, 0, 1, 0, 1, 1, 1];
+    var SX = 55, SX2 = 385, N = 10;
+
+    var S = {
+      ys: ORIGINAL_Y.slice(),
+      labels: ORIGINAL_LABELS.slice(),
+      a: 43.8, s: 3780 / 825,               // line used by sections 1-3
+      trial: { a: 20, s: 2 },               // trial line in the cost section
+      w: 0.677, b: -3.722, t: 0.5,          // logistic parameters
+      lx: 7.5, cx: 7,
+      linStep: 0, logStep: 0,
+      showResiduals: true,
+      gd: { a: 20, s: 2, k: 0 },
+      gdHistory: [],
+      gdLast: null,
+      gdTimer: null
+    };
+
+    // ---------- maths ----------
+    function ols(ys) {
+      var sy = 0, sxy = 0;
+      for (var i = 0; i < ys.length; i++) { sy += ys[i]; sxy += (i + 1) * ys[i]; }
+      var s = (N * sxy - SX * sy) / (N * SX2 - SX * SX);
+      return { sy: sy, sxy: sxy, s: s, a: sy / N - s * (SX / N) };
+    }
+    function costOf(ys, a, s) {
+      var sse = 0;
+      for (var i = 0; i < ys.length; i++) { var e = ys[i] - (a + s * (i + 1)); sse += e * e; }
+      return { sse: sse, mse: sse / ys.length, j: sse / (2 * ys.length) };
+    }
+    function logLoss(labels, w, b) {
+      var sum = 0;
+      for (var i = 0; i < labels.length; i++) {
+        var z = w * (i + 1) + b;
+        sum += Math.max(z, 0) + Math.log1p(Math.exp(-Math.abs(z))) - labels[i] * z;
+      }
+      return sum / labels.length;
+    }
+
+    // ---------- chart helpers ----------
+    function chart(host, opt) {
+      var W = opt.width || 720, H = opt.height || 300;
+      var pad = { l: 52, r: 22, t: 24, b: 44 };
+      var xmin = opt.xmin === undefined ? 0 : opt.xmin, xmax = opt.xmax === undefined ? 12 : opt.xmax;
+      var ymin = opt.ymin === undefined ? 0 : opt.ymin, ymax = opt.ymax === undefined ? 100 : opt.ymax;
+      var X = function (x) { return pad.l + (x - xmin) / (xmax - xmin) * (W - pad.l - pad.r); };
+      var Y = function (y) { return H - pad.b - (y - ymin) / (ymax - ymin) * (H - pad.t - pad.b); };
+      var out = [];
+      var i, j;
+      for (j = 0; j <= 4; j++) {
+        var y = ymin + (ymax - ymin) * j / 4;
+        out.push('<line x1="' + pad.l + '" y1="' + Y(y) + '" x2="' + (W - pad.r) + '" y2="' + Y(y) + '" stroke="var(--rs-line)" stroke-width="1"/>');
+        out.push('<text x="' + (pad.l - 8) + '" y="' + (Y(y) + 4) + '" text-anchor="end" fill="var(--rs-muted)" font-size="11">' + nf(y, opt.yTick === undefined ? 2 : opt.yTick) + '</text>');
+      }
+      for (i = 0; i <= 4; i++) {
+        var x = xmin + (xmax - xmin) * i / 4;
+        out.push('<text x="' + X(x) + '" y="' + (H - pad.b + 20) + '" text-anchor="middle" fill="var(--rs-muted)" font-size="11">' + nf(x, opt.xTick === undefined ? 1 : opt.xTick) + '</text>');
+      }
+      var cid = "rsclip" + Math.floor(Math.random() * 1e9);
+      out.push('<defs><clipPath id="' + cid + '"><rect x="' + pad.l + '" y="' + pad.t + '" width="' + (W - pad.l - pad.r) + '" height="' + (H - pad.t - pad.b) + '"/></clipPath></defs>');
+      out.push('<g clip-path="url(#' + cid + ')">');
+      if (opt.band) out.push('<rect x="' + pad.l + '" y="' + Y(opt.band.to) + '" width="' + (W - pad.l - pad.r) + '" height="' + (Y(opt.band.from) - Y(opt.band.to)) + '" fill="var(--rs-primary)" opacity="0.06"/>');
+      if (opt.threshold !== undefined) {
+        out.push('<line x1="' + pad.l + '" y1="' + Y(opt.threshold) + '" x2="' + (W - pad.r) + '" y2="' + Y(opt.threshold) + '" stroke="var(--rs-bad)" stroke-dasharray="6 5" stroke-width="1.5"/>');
+        out.push('<text x="' + (W - pad.r) + '" y="' + (Y(opt.threshold) - 6) + '" text-anchor="end" fill="var(--rs-bad)" font-size="11">Threshold ' + nf(opt.threshold, 2) + '</text>');
+      }
+      (opt.lines || []).forEach(function (ln) {
+        var pts = ln.points || [];
+        var d = pts.map(function (p, k) { return (k ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1); }).join("");
+        out.push('<path d="' + d + '" fill="none" stroke="' + (ln.color || "var(--rs-primary)") + '" stroke-width="' + (ln.width || 2.4) + '"' + (ln.dash ? ' stroke-dasharray="5 4"' : "") + '/>');
+      });
+      (opt.points || []).forEach(function (p) {
+        if (p.residual !== undefined) out.push('<line x1="' + X(p.x) + '" y1="' + Y(p.y) + '" x2="' + X(p.x) + '" y2="' + Y(p.residual) + '" stroke="var(--rs-muted)" stroke-dasharray="3 3" stroke-width="1.3" opacity="0.75"/>');
+        out.push('<circle cx="' + X(p.x) + '" cy="' + Y(p.y) + '" r="' + (p.r || 4.6) + '" fill="' + (p.color || "var(--rs-data)") + '" stroke="var(--rs-card)" stroke-width="1.4"/>');
+      });
+      if (opt.marker) out.push('<circle cx="' + X(opt.marker.x) + '" cy="' + Y(opt.marker.y) + '" r="6.5" fill="var(--rs-orange)" stroke="var(--rs-card)" stroke-width="1.6"/>');
+      out.push('</g>');
+      out.push('<text x="' + pad.l + '" y="14" fill="var(--rs-muted)" font-size="11">' + (opt.ylab || "") + '</text>');
+      out.push('<text x="' + (W / 2) + '" y="' + (H - 5) + '" text-anchor="middle" fill="var(--rs-muted)" font-size="11">' + (opt.xlab || "") + '</text>');
+      host.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + (opt.aria || "chart") + '">' + out.join("") + '</svg>';
+    }
+
+    function statsHtml(host, rows) {
+      host.innerHTML = rows.map(function (r) {
+        return '<div class="rs-stat"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
+      }).join("");
+    }
+
+    // =====================================================================
+    // 1. LINEAR REGRESSION
+    // =====================================================================
+    function linTable() {
+      var rows = S.ys.map(function (y, i) {
+        return '<tr><td>' + String.fromCharCode(65 + i) + '</td><td>' + (i + 1) + '</td>' +
+          '<td><input type="number" min="0" max="100" step="1" value="' + y + '" data-i="' + i + '" aria-label="Score of student ' + String.fromCharCode(65 + i) + '"></td></tr>';
+      }).join("");
+      $("lin-data-table").innerHTML = '<thead><tr><th>Student</th><th>Hours</th><th>Score</th></tr></thead><tbody>' + rows + '</tbody>';
+    }
+
+    var LIN_STEPS = [
+      {
+        title: "Name the input and the target",
+        what: "Each row is one student. The input x is study hours; the target y is the exam score. We are looking for an intercept and a slope.",
+        write: "ŷ = b₀ + b₁x"
+      },
+      {
+        title: "Add up the ten samples",
+        what: "Multiply x by y and square x. The working table at the bottom shows every value.",
+        write: "n = 10 · Σx = 55 · Σx² = 385"
+      },
+      {
+        title: "Find the best slope",
+        what: "The top of the fraction measures how x and y move together. The bottom adjusts for how spread out x is.",
+        write: "b₁ = " + fr("n·Σxy − Σx·Σy", "n·Σx² − (Σx)²")
+      },
+      {
+        title: "Find the best intercept",
+        what: "The average x is 5.5 hours. The OLS line always passes through the point (average x, average y).",
+        write: "b₀ = mean(y) − b₁ × mean(x)"
+      },
+      {
+        title: "Predict with the line you have",
+        what: "This step follows whichever slider you are holding. Press “Find the best line” to use the OLS answer.",
+        write: "ŷ = b₀ + b₁ × hours"
+      },
+      {
+        title: "Measure the error on the training data",
+        what: "Residual = actual − predicted. Squaring stops positive and negative errors from cancelling out.",
+        write: "MSE = " + fr("Σ(y − ŷ)²", "n")
+      }
+    ];
+
+    function renderLinear() {
+      var o = ols(S.ys), c = costOf(S.ys, S.a, S.s), p = S.a + S.s * S.lx;
+
+      $("lin-b0").value = S.a; $("lin-b0-v").textContent = nf(S.a, 3);
+      $("lin-b1").value = S.s; $("lin-b1-v").textContent = nf(S.s, 4);
+
+      $("lin-eq").textContent = "ŷ = " + nf(S.a) + " + (" + nf(S.s) + ")x";
+      statsHtml($("lin-stats"), [["Samples", "10"], ["MSE (training)", nf(c.mse, 3)], ["Σ residual²", nf(c.sse, 2)]]);
+
+      var pts = S.ys.map(function (y, i) {
+        return { x: i + 1, y: y, residual: S.showResiduals ? S.a + S.s * (i + 1) : undefined };
+      });
+      chart($("lin-chart"), {
+        points: pts,
+        lines: [{ points: [[0, S.a], [12, S.a + S.s * 12]], color: "var(--rs-primary)" }],
+        marker: { x: S.lx, y: p },
+        ylab: "Exam score", xlab: "Study hours in one week",
+        aria: "Scatter plot of ten exam scores with the current line and a new prediction"
+      });
+
+      $("lin-x-v").textContent = nf(S.lx, 1) + " h";
+      $("lin-pred").textContent = nf(p, 2) + " points";
+      $("lin-sub").textContent = "ŷ = " + nf(S.a) + " + (" + nf(S.s) + " × " + nf(S.lx, 1) + ") = " + nf(p, 2);
+
+      var warn = [];
+      if (S.lx < 1 || S.lx > 10) warn.push("Extrapolation: this input is outside the 1–10 hour range of the data.");
+      if (p < 0 || p > 100) warn.push("The prediction is outside 0–100. A straight line has no built-in limit.");
+      $("lin-warn").textContent = warn.join(" ");
+      $("lin-warn").classList.toggle("rs-off", warn.length === 0);
+
+      // steps
+      var si = S.linStep;
+      var body = "";
+      if (si === 0) body = "<p>ŷ = b₀ + b₁x</p>";
+      if (si === 1) body = "<p>Σy = " + nf(o.sy) + " · Σxy = " + nf(o.sxy) + "</p>";
+      if (si === 2) body = "<p>b₁ = " + fr("10 × " + nf(o.sxy) + " − 55 × " + nf(o.sy), "10 × 385 − 55²") + "</p><p>b₁ = <b>" + nf(o.s) + "</b></p>";
+      if (si === 3) body = "<p>mean(y) = " + nf(o.sy) + " ÷ 10 = " + nf(o.sy / 10) + "</p><p>b₀ = " + nf(o.sy / 10) + " − (" + nf(o.s) + " × 5.5) = <b>" + nf(o.a) + "</b></p><p>OLS line: ŷ = " + nf(o.a) + " + (" + nf(o.s) + ")x</p>";
+      if (si === 4) body = "<p>ŷ = " + nf(S.a) + " + (" + nf(S.s) + " × " + nf(S.lx, 1) + ") = <b>" + nf(p, 2) + "</b></p>";
+      if (si === 5) body = '<p>Σ residuals² = ' + nf(c.sse) + '</p><p>MSE = ' + nf(c.sse) + " ÷ 10 = <b>" + nf(c.sse / 10) + "</b></p><p class=\"rs-small\">This is the error on the training data. To judge generalisation you need a separate test set.</p>";
+
+      $("lin-step").innerHTML = '<span class="rs-badge">STEP ' + (si + 1) + ' / 6</span><h4 class="rs-h3">' + LIN_STEPS[si].title + '</h4><p>' + LIN_STEPS[si].what + '</p><div class="rs-formula">' + body + "</div>";
+      $("lin-dots").innerHTML = LIN_STEPS.map(function (_, k) { return '<i class="' + (k <= si ? "on" : "") + '"></i>'; }).join("");
+      $("lin-prev").disabled = si === 0;
+      $("lin-next").disabled = si === LIN_STEPS.length - 1;
+
+      $("lin-helper").innerHTML = '<table class="rs-table"><thead><tr><th>Student</th><th>x</th><th>y</th><th>x²</th><th>xy</th><th>ŷ</th><th>Residual</th></tr></thead><tbody>' +
+        S.ys.map(function (y, i) {
+          var x = i + 1, pr = S.a + S.s * x;
+          return "<tr><td>" + String.fromCharCode(65 + i) + "</td><td>" + x + "</td><td>" + y + "</td><td>" + x * x + "</td><td>" + nf(x * y) + "</td><td>" + nf(pr, 2) + "</td><td>" + nf(y - pr, 2) + "</td></tr>";
+        }).join("") +
+        '<tfoot><tr><td>Total</td><td>55</td><td>' + nf(o.sy) + "</td><td>385</td><td>" + nf(o.sxy) + "</td><td>—</td><td>—</td></tr></tfoot></table>";
+    }
+
+    // =====================================================================
+    // 2. COST FUNCTION
+    // =====================================================================
+    function costTable() {
+      $("cost-data-table").innerHTML = '<thead><tr><th>Student</th><th>Hours</th><th>Score</th></tr></thead><tbody>' +
+        S.ys.map(function (y, i) {
+          return '<tr><td>' + String.fromCharCode(65 + i) + "</td><td>" + (i + 1) +
+            '</td><td><input type="number" min="0" max="100" step="1" value="' + y + '" data-i="' + i + '" aria-label="Score of student ' + String.fromCharCode(65 + i) + '"></td></tr>';
+        }).join("") + "</tbody>";
+    }
+
+    function renderCost() {
+      var t = S.trial, c = costOf(S.ys, t.a, t.s);
+      var fit = ols(S.ys), fitCost = costOf(S.ys, fit.a, fit.s);
+
+      $("cost-b0").value = t.a; $("cost-b0-v").textContent = nf(t.a, 3);
+      $("cost-b1").value = t.s; $("cost-b1-v").textContent = nf(t.s, 4);
+      $("cost-eq").textContent = "ŷ = " + nf(t.a) + " + (" + nf(t.s) + ")x";
+      statsHtml($("cost-stats"), [["Cost J = MSE / 2", nf(c.j, 3)], ["MSE", nf(c.mse, 3)], ["Σ residual²", nf(c.sse, 2)]]);
+
+      chart($("cost-chart"), {
+        points: S.ys.map(function (y, i) { return { x: i + 1, y: y, residual: t.a + t.s * (i + 1) }; }),
+        lines: [{ points: [[0, t.a], [12, t.a + t.s * 12]], color: "var(--rs-primary)" }],
+        ylab: "Exam score", xlab: "Study hours in one week",
+        aria: "Trial line through the ten exam scores with residuals"
+      });
+
+      // one-dimensional slice: cost as a function of slope, intercept fixed
+      var slice = [];
+      for (var i = 0; i <= 160; i++) {
+        var s = -5 + i / 15.2;
+        slice.push([s, costOf(S.ys, t.a, s).j]);
+      }
+      var top = Math.max.apply(null, slice.map(function (p) { return p[1]; }).concat([c.j])) * 1.08;
+      chart($("cost-slice"), {
+        points: [{ x: t.s, y: c.j, r: 6, color: "var(--rs-orange)" }],
+        lines: [{ points: slice, color: "var(--rs-primary)" }],
+        xmin: -5, xmax: 15, ymax: top, yTick: 0,
+        ylab: "Cost J", xlab: "Slope b₁ (intercept held fixed)",
+        aria: "Cost as a function of the slope, with the running point"
+      });
+      var bestSlope = 0;
+      for (var k = 0; k < S.ys.length; k++) bestSlope += (k + 1) * (S.ys[k] - t.a);
+      bestSlope = bestSlope / SX2;
+      $("cost-slice-note").textContent = "With b₀ held at " + nf(t.a) + ", this slice bottoms out at b₁ = " + nf(bestSlope) + ". That is not necessarily the joint minimum of both parameters.";
+
+      $("cost-formula").innerHTML = "J = " + fr("1", "2n") + " · Σ(yᵢ − ŷᵢ)²";
+      $("cost-table").innerHTML = '<table class="rs-table"><thead><tr><th>Student</th><th>x</th><th>y</th><th>ŷ = b₀ + b₁x</th><th>Residual y − ŷ</th><th>Residual²</th></tr></thead><tbody>' +
+        S.ys.map(function (y, i) {
+          var x = i + 1, pr = t.a + t.s * x, e = y - pr;
+          return "<tr><td>" + String.fromCharCode(65 + i) + "</td><td>" + x + "</td><td>" + y + "</td><td>" + nf(pr, 2) + "</td><td>" + nf(e, 2) + "</td><td>" + nf(e * e, 2) + "</td></tr>";
+        }).join("") +
+        '<tfoot><tr><td colspan="5">Sum of squared residuals</td><td>' + nf(c.sse) + "</td></tr></tfoot></table>";
+      $("cost-answer").textContent = "J = " + nf(c.sse) + " ÷ (2 × 10) = " + nf(c.j) + ". MSE = " + nf(c.sse) + " ÷ 10 = " + nf(c.mse) + ". The OLS line scores J = " + nf(fitCost.j) + ", the smallest possible.";
+    }
+
+    // =====================================================================
+    // 3. GRADIENT DESCENT
+    // =====================================================================
+    function gdPause() {
+      if (S.gdTimer) { clearInterval(S.gdTimer); S.gdTimer = null; }
+      $("gd-run").textContent = "▶ Run";
+      $("gd-alpha").disabled = false;
+      $("gd-speed").disabled = false;
+    }
+
+    function gdInit(a, s) {
+      gdPause();
+      S.gd = { a: a, s: s, k: 0 };
+      S.gdHistory = [{ a: a, s: s, j: costOf(S.ys, a, s).j, k: 0 }];
+      S.gdLast = null;
+      $("gd-msg").textContent = "Ready. Run one step, or start the animation.";
+      renderGD();
+    }
+
+    function gdTick() {
+      var g = S.gd, c = costOf(S.ys, g.a, g.s), alpha = parseFloat($("gd-alpha").value);
+      var ga = 0, gs = 0;
+      for (var i = 0; i < S.ys.length; i++) {
+        var x = i + 1, e = (g.a + g.s * x) - S.ys[i];
+        ga += e; gs += e * x;
+      }
+      ga /= S.ys.length; gs /= S.ys.length;
+
+      if (g.k >= 20000) { gdPause(); $("gd-msg").textContent = "Stopped at 20,000 steps. Restart to try another setting."; return false; }
+      if (Math.hypot(ga, gs) < 1e-6) { gdPause(); $("gd-msg").textContent = "Converged: both gradients are below 10⁻⁶."; return false; }
+
+      var na = g.a - alpha * ga, ns = g.s - alpha * gs;
+      var nc = costOf(S.ys, na, ns);
+      if (!isFinite(nc.j) || nc.j > 1e12) { gdPause(); $("gd-msg").textContent = "Cost exploded. Training stopped before overflow: use a smaller learning rate and restart."; return false; }
+
+      S.gdLast = { from: { a: g.a, s: g.s, k: g.k }, c: c, ga: ga, gs: gs, alpha: alpha, to: { a: na, s: ns }, j: nc.j };
+      S.gd = { a: na, s: ns, k: g.k + 1 };
+      S.gdHistory.push({ a: na, s: ns, j: nc.j, k: S.gd.k });
+      return true;
+    }
+
+    function sample(arr, max) {
+      if (arr.length <= max) return arr;
+      var out = [];
+      for (var i = 0; i < max; i++) out.push(arr[Math.round(i * (arr.length - 1) / (max - 1))]);
+      return out;
+    }
+
+    function renderGD() {
+      var g = S.gd, c = costOf(S.ys, g.a, g.s), fit = ols(S.ys), fitC = costOf(S.ys, fit.a, fit.s);
+
+      statsHtml($("gd-stats"), [["Step", nf(g.k, 0)], ["Cost J", nf(c.j, 5)], ["OLS minimum", nf(fitC.j, 5)]]);
+      $("gd-eq").textContent = "ŷ = " + nf(g.a, 4) + " + (" + nf(g.s, 4) + ")x";
+      $("gd-best").innerHTML = "<b>b₀</b> = " + nf(fit.a) + "<br><b>b₁</b> = " + nf(fit.s) + "<br><b>J minimum</b> = " + nf(fitC.j, 6);
+
+      chart($("gd-chart"), {
+        points: S.ys.map(function (y, i) { return { x: i + 1, y: y }; }),
+        lines: [
+          { points: [[0, fit.a], [12, fit.a + fit.s * 12]], color: "var(--rs-muted)", dash: true, width: 2 },
+          { points: [[0, g.a], [12, g.a + g.s * 12]], color: "var(--rs-primary)" }
+        ],
+        ylab: "Exam score", xlab: "Study hours in one week",
+        aria: "Current gradient descent line and the OLS line"
+      });
+
+      var hist = sample(S.gdHistory, 600).map(function (p) { return [p.k, Math.log10(1 + p.j)]; });
+      var hmax = Math.max.apply(null, hist.map(function (p) { return p[1]; }).concat([1])) * 1.08;
+      chart($("gd-history"), {
+        lines: [{ points: hist, color: "var(--rs-primary)" }],
+        xmax: Math.max(g.k, 1), ymax: hmax, yTick: 2, width: 380, height: 230,
+        ylab: "log₁₀(1 + J)", xlab: "Step",
+        aria: "Cost falling over the steps"
+      });
+
+      // cost map in parameter space
+      var W = 380, H = 230, L = 44, R = 12, T = 18, B = 34;
+      var xa = -10, xb = 100, ya = -5, yb = 15;
+      var MX = function (a) { return L + (a - xa) / (xb - xa) * (W - L - R); };
+      var MY = function (s) { return H - B - (s - ya) / (yb - ya) * (H - T - B); };
+      var maxLog = Math.log10(1 + costOf(S.ys, -10, -5).j);
+      var cells = [], rows = 22, cols = 30;
+      for (var jj = 0; jj < rows; jj++) {
+        for (var ii = 0; ii < cols; ii++) {
+          var aa = xa + (xb - xa) * (ii + 0.5) / cols;
+          var ss = ya + (yb - ya) * (jj + 0.5) / rows;
+          var v = Math.min(1, Math.log10(1 + costOf(S.ys, aa, ss).j) / maxLog);
+          cells.push('<rect x="' + (L + ii * (W - L - R) / cols).toFixed(1) + '" y="' + (T + (rows - 1 - jj) * (H - T - B) / rows).toFixed(1) +
+            '" width="' + ((W - L - R) / cols + 1).toFixed(1) + '" height="' + ((H - T - B) / rows + 1).toFixed(1) +
+            '" fill="hsl(217 60% ' + (92 - v * 55).toFixed(0) + '%)" opacity="0.9"/>');
+        }
+      }
+      var walk = sample(S.gdHistory, 400).map(function (p, i) { return (i ? "L" : "M") + MX(p.a).toFixed(1) + "," + MY(p.s).toFixed(1); }).join("");
+      cells.push('<path d="' + walk + '" fill="none" stroke="var(--rs-orange)" stroke-width="2"/>');
+      cells.push('<path d="M' + (MX(fit.a) - 4) + ',' + MY(fit.s) + 'h8M' + MX(fit.a) + ',' + (MY(fit.s) - 4) + 'v8" stroke="var(--rs-ink)" stroke-width="2"/>');
+      cells.push('<circle cx="' + MX(g.a) + '" cy="' + MY(g.s) + '" r="4" fill="var(--rs-orange)" stroke="var(--rs-card)" stroke-width="1.4"/>');
+      [-10, 20, 50, 80].forEach(function (a) {
+        cells.push('<text x="' + MX(a) + '" y="' + (H - B + 15) + '" text-anchor="middle" fill="var(--rs-muted)" font-size="10">' + a + '</text>');
+      });
+      [-5, 0, 5, 10, 15].forEach(function (s) {
+        cells.push('<text x="' + (L - 5) + '" y="' + (MY(s) + 3) + '" text-anchor="end" fill="var(--rs-muted)" font-size="10">' + s + '</text>');
+      });
+      $("gd-map").innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cost map and the path taken by gradient descent">' + cells.join("") + '</svg>';
+      $("gd-map-note").textContent = (g.a < xa || g.a > xb || g.s < ya || g.s > yb)
+        ? "The live parameters are outside this map. Check the values and the cost."
+        : "The + marks the OLS minimum; the orange dot is where the parameters are now.";
+
+      var last = S.gdLast;
+      if (!last) {
+        $("gd-iter-title").textContent = "No update yet";
+        $("gd-iter").innerHTML = "<p>Press “One step” to see the arithmetic for both parameters.</p>";
+        $("gd-table").innerHTML = "<p class=\"rs-small\">No step has been taken yet.</p>";
+        return;
+      }
+      $("gd-iter-title").textContent = "Step " + last.from.k + " → " + (last.from.k + 1);
+      var sumE = last.ga * S.ys.length, sumEX = last.gs * S.ys.length;
+      $("gd-iter").innerHTML =
+        '<div class="rs-formula"><b>1. Predict, then measure the error</b><p>The error here is predicted − actual, the opposite sign to the residual in the cost section. Squaring makes both agree.</p><p>For student A: ŷ = ' + nf(last.c.sse && (last.from.a + last.from.s * 1), 2) + ", error = " + nf((last.from.a + last.from.s * 1) - S.ys[0], 2) + ".</p></div>" +
+        '<div class="rs-formula"><b>2. Both gradients, from the old parameters</b><p>∂J/∂b₀ = (1/n)Σ(ŷ − y) = ' + nf(sumE) + " ÷ 10 = <b>" + nf(last.ga, 6) + "</b></p><p>∂J/∂b₁ = (1/n)Σ(ŷ − y)x = " + nf(sumEX) + " ÷ 10 = <b>" + nf(last.gs, 6) + "</b></p></div>" +
+        '<div class="rs-formula"><b>3. Update both at the same time</b><p>b₀ new = ' + nf(last.from.a) + " − " + nf(last.alpha) + " × (" + nf(last.ga) + ") = <b>" + nf(last.to.a, 4) + "</b></p><p>b₁ new = " + nf(last.from.s) + " − " + nf(last.alpha) + " × (" + nf(last.gs) + ") = <b>" + nf(last.to.s, 4) + "</b></p></div>" +
+        '<p class="rs-hint">Cost before = ' + nf(last.c.j, 6) + " → cost after = " + nf(last.j, 6) + ". " + (last.j > last.c.j ? "The cost went up: the learning rate is probably too large." : "The cost went down (or stayed put within rounding).") + "</p>";
+
+      $("gd-table").innerHTML = '<table class="rs-table"><thead><tr><th>Student</th><th>x</th><th>y</th><th>old ŷ</th><th>e = ŷ − y</th><th>ex</th><th>e²</th></tr></thead><tbody>' +
+        S.ys.map(function (y, i) {
+          var x = i + 1, p = last.from.a + last.from.s * x, e = p - y;
+          return "<tr><td>" + String.fromCharCode(65 + i) + "</td><td>" + x + "</td><td>" + y + "</td><td>" + nf(p, 2) + "</td><td>" + nf(e, 2) + "</td><td>" + nf(e * x, 2) + "</td><td>" + nf(e * e, 2) + "</td></tr>";
+        }).join("") +
+        '<tfoot><tr><td colspan="4">Sum</td><td>' + nf(sumE) + "</td><td>" + nf(sumEX) + "</td><td>" + nf(last.c.sse) + "</td></tr></tfoot></table>";
+    }
+
+    // =====================================================================
+    // 4. LOGISTIC REGRESSION
+    // =====================================================================
+    var LOG_STEPS = [
+      { title: "Decide what the label means", what: "1 means passed, 0 means did not pass. Study hours are the input. The model produces the probability of class 1." },
+      { title: "Compute the straight-line score", what: "Multiply hours by the weight, then add the bias. This score can be negative or bigger than 1." },
+      { title: "Turn the score into a probability", what: "The sigmoid squeezes any score into the range 0 to 1. The constant e is about 2.71828." },
+      { title: "Compare with the threshold", what: "If the probability is at least the threshold, predict class 1. Otherwise predict class 0." },
+      { title: "Check the mistakes", what: "Compare the predicted class with the real label on all ten samples. The full table is under this card." },
+      { title: "Average the log loss", what: "Log loss scores the probability itself, not the decision. A confident mistake is punished heavily." }
+    ];
+
+    function logTable() {
+      $("log-data-table").innerHTML = '<thead><tr><th>Student</th><th>Hours</th><th>Label</th></tr></thead><tbody>' +
+        S.labels.map(function (y, i) {
+          return "<tr><td>" + String.fromCharCode(65 + i) + "</td><td>" + (i + 1) + "</td><td>" +
+            '<select data-i="' + i + '" aria-label="Label of student ' + String.fromCharCode(65 + i) + '">' +
+            '<option value="0"' + (y ? "" : " selected") + ">0</option><option value=\"1\"" + (y ? " selected" : "") + ">1</option></select></td></tr>";
+        }).join("") + "</tbody>";
+    }
+
+    function renderLogistic() {
+      var ps = S.labels.map(function (_, i) { return sig(S.w * (i + 1) + S.b); });
+      var correct = ps.filter(function (p, i) { return (p >= S.t ? 1 : 0) === S.labels[i]; }).length;
+      var z = S.w * S.cx + S.b, p = sig(z), pred = p >= S.t;
+      var tp = 0, tn = 0, fp = 0, fn = 0;
+      ps.forEach(function (pv, i) {
+        var v = pv >= S.t ? 1 : 0, y = S.labels[i];
+        if (v && y) tp++; else if (v && !y) fp++; else if (!v && y) fn++; else tn++;
+      });
+
+      $("log-w").value = S.w; $("log-w-v").textContent = nf(S.w, 4);
+      $("log-b").value = S.b; $("log-b-v").textContent = nf(S.b, 4);
+      $("log-t").value = S.t; $("log-t-v").textContent = nf(S.t, 2);
+
+      $("log-eq").textContent = "z = (" + nf(S.w) + ")x + (" + nf(S.b) + ")";
+      statsHtml($("log-stats"), [["Accuracy (training)", correct * 10 + "%"], ["Log loss", nf(logLoss(S.labels, S.w, S.b))], ["Threshold", nf(S.t, 2)]]);
+
+      chart($("log-chart"), {
+        points: S.labels.map(function (y, i) { return { x: i + 1, y: y, color: y ? "var(--rs-primary)" : "var(--rs-bad)" }; }),
+        lines: [{
+          points: (function () {
+            var pts = [];
+            for (var i = 0; i <= 240; i++) { var x = i / 20; pts.push([x, sig(S.w * x + S.b)]); }
+            return pts;
+          })(), color: "var(--rs-primary)"
+        }],
+        marker: { x: S.cx, y: p }, threshold: S.t, ymax: 1, yTick: 1,
+        ylab: "Probability of passing", xlab: "Study hours in one week",
+        aria: "Sigmoid curve with ten real labels and one new prediction"
+      });
+
+      $("log-x-v").textContent = nf(S.cx, 1) + " h";
+      $("log-pred").textContent = nf(p * 100, 2) + "% · " + (pred ? "Pass" : "Fail");
+      $("log-sub").textContent = "z = " + nf(S.w) + " × " + nf(S.cx, 1) + " + (" + nf(S.b) + ") = " + nf(z);
+      $("log-read").textContent = "The probability of passing is " + nf(p, 4) + (pred ? " ≥ " : " < ") + nf(S.t, 2) + ", so the predicted class is " + (pred ? "1 (pass)." : "0 (fail).") + " A probability is not a guarantee, and it is not an exam score.";
+      $("log-warn").classList.toggle("rs-off", S.cx >= 1 && S.cx <= 10);
+      $("log-warn").textContent = "Extrapolation: this input is outside the 1–10 hour range of the training data.";
+
+      var si = S.logStep, body = "";
+      if (si === 0) body = "<p>x = " + nf(S.cx, 1) + " h · w = " + nf(S.w) + " · b = " + nf(S.b) + "</p><p class=\"rs-small\">The starting values come from fitting the ten built-in samples. Change a label, then press “Train” to update them.</p>";
+      if (si === 1) body = "<p>z = (" + nf(S.w) + " × " + nf(S.cx, 1) + ") + (" + nf(S.b) + ") = <b>" + nf(z) + "</b></p>";
+      if (si === 2) body = "<p>p = " + fr("1", "1 + e<sup>−z</sup>") + "</p><p>e<sup>−z</sup> ≈ " + nf(Math.exp(-z), 6) + "</p><p>p = 1 ÷ (1 + " + nf(Math.exp(-z), 6) + ") ≈ <b>" + nf(p, 4) + "</b> = " + nf(p * 100, 2) + "%</p>";
+      if (si === 3) body = "<p>p = " + nf(p, 4) + " · threshold = " + nf(S.t, 2) + "</p><p>" + nf(p, 4) + (pred ? " ≥ " : " < ") + nf(S.t, 2) + " → <b>" + (pred ? "Pass (1)" : "Fail (0)") + "</b></p><p class=\"rs-small\">Move the threshold. The probability stays the same; the decision can flip.</p>";
+      if (si === 4) body = "<p>Correct = " + correct + " of 10 → accuracy = <b>" + correct * 10 + "%</b></p><p>TP = " + tp + " · TN = " + tn + " · FP = " + fp + " · FN = " + fn + "</p><p class=\"rs-small\">TP: a pass predicted as pass. TN: a fail predicted as fail. FP: a fail predicted as pass. FN: a pass predicted as fail.</p>";
+      if (si === 5) {
+        var a0 = S.labels[0] ? Math.max(ps[0], 1e-15) : Math.max(1 - ps[0], 1e-15);
+        body = "<p>Label 1: loss = −ln(p)</p><p>Label 0: loss = −ln(1 − p)</p><p>Average over ten samples = <b>" + nf(logLoss(S.labels, S.w, S.b)) + "</b></p><p>Student A (y = " + S.labels[0] + "): loss = −ln(" + nf(a0, 6) + ") ≈ " + nf(-Math.log(a0)) + "</p><p class=\"rs-small\">Moving the threshold does not change the log loss, because the probabilities do not change.</p>";
+      }
+      $("log-step").innerHTML = '<span class="rs-badge">STEP ' + (si + 1) + ' / 6</span><h4 class="rs-h3">' + LOG_STEPS[si].title + '</h4><p>' + LOG_STEPS[si].what + '</p><div class="rs-formula">' + body + "</div>";
+      $("log-dots").innerHTML = LOG_STEPS.map(function (_, k) { return '<i class="' + (k <= si ? "on" : "") + '"></i>'; }).join("");
+      $("log-prev").disabled = si === 0;
+      $("log-next").disabled = si === LOG_STEPS.length - 1;
+
+      $("log-helper").innerHTML = '<table class="rs-table"><thead><tr><th>Student</th><th>x</th><th>Actual</th><th>z</th><th>p(pass)</th><th>Predicted</th><th>Result</th></tr></thead><tbody>' +
+        S.labels.map(function (y, i) {
+          var pv = ps[i], v = pv >= S.t ? 1 : 0;
+          return '<tr class="' + (v === y ? "" : "bad") + '"><td>' + String.fromCharCode(65 + i) + "</td><td>" + (i + 1) + "</td><td>" + y + "</td><td>" + nf(S.w * (i + 1) + S.b, 3) + "</td><td>" + nf(pv * 100, 2) + "%</td><td>" + v + "</td><td>" + (v === y ? "Correct" : "Wrong") + "</td></tr>";
+        }).join("") + "</tbody></table>";
+    }
+
+    // Newton-Raphson fit; returns a status instead of pretending to converge.
+    function fitLogistic(labels) {
+      var w = 0, b = 0, status = "converged";
+      for (var k = 0; k < 100; k++) {
+        var gw = 0, gb = 0, hww = 0, hw = 0, hb = 0;
+        for (var i = 0; i < labels.length; i++) {
+          var x = i + 1, pv = sig(w * x + b), q = pv * (1 - pv);
+          gw += (pv - labels[i]) * x; gb += pv - labels[i];
+          hww += q * x * x; hw += q * x; hb += q;
+        }
+        if (Math.max(Math.abs(gw), Math.abs(gb)) < 1e-9) return { w: w, b: b, status: "converged" };
+        var det = hww * hb - hw * hw;
+        if (det < 1e-14) { status = "not converged"; break; }
+        var dw = (hb * gw - hw * gb) / det, db = (hww * gb - hw * gw) / det;
+        var rate = 1, old = logLoss(labels, w, b);
+        while (rate > 1e-8 && logLoss(labels, w - rate * dw, b - rate * db) > old) rate *= 0.5;
+        w -= rate * dw; b -= rate * db;
+        if (Math.abs(w) > 15 || Math.abs(b) > 100) { status = "separation"; break; }
+      }
+      return { w: w, b: b, status: status };
+    }
+
+    function syncSlider(id, value) {
+      var el = $(id);
+      el.min = Math.min(parseFloat(el.min), value - 1);
+      el.max = Math.max(parseFloat(el.max), value + 1);
+      el.value = value;
+    }
+
+    // =====================================================================
+    // wiring
+    // =====================================================================
+    var TABS = [
+      { id: "linear", label: "1 · Linear regression", panel: "rs-linear" },
+      { id: "cost", label: "2 · Cost function", panel: "rs-cost" },
+      { id: "gd", label: "3 · Gradient descent", panel: "rs-gd" },
+      { id: "logistic", label: "4 · Logistic regression", panel: "rs-logistic" }
+    ];
+
+    function showTab(id) {
+      TABS.forEach(function (t) {
+        $(t.panel).classList.toggle("rs-off", t.id !== id);
+        var b = $("rs-tab-" + t.id);
+        b.setAttribute("aria-selected", String(t.id === id));
+        b.tabIndex = t.id === id ? 0 : -1;
+      });
+      if (id !== "gd") gdPause();
+    }
+
+    $("rs-tabs").innerHTML = TABS.map(function (t) {
+      return '<button type="button" class="rs-tab" role="tab" id="rs-tab-' + t.id + '" aria-selected="false" data-tab="' + t.id + '">' + t.label + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("rs-tabs").querySelectorAll(".rs-tab"), function (b) {
+      b.addEventListener("click", function () { showTab(b.dataset.tab); });
+    });
+
+    // section 1
+    $("lin-data-table").addEventListener("change", function (e) {
+      var el = e.target;
+      if (!el.matches("input")) return;
+      var v = Number(el.value);
+      if (el.value === "" || !isFinite(v) || v < 0 || v > 100) {
+        el.value = S.ys[Number(el.dataset.i)];
+        $("lin-msg").textContent = "Enter a score between 0 and 100.";
+        return;
+      }
+      S.ys[Number(el.dataset.i)] = v;
+      $("lin-msg").textContent = "Scores changed. Press OLS to refit the line.";
+      renderLinear(); costTable(); renderCost(); gdInit(parseFloat($("gd-start-b0").value), parseFloat($("gd-start-b1").value));
+    });
+    ["lin-b0", "lin-b1", "lin-x"].forEach(function (id) {
+      $(id).addEventListener("input", function (e) {
+        var v = parseFloat(e.target.value);
+        if (id === "lin-b0") S.a = v; else if (id === "lin-b1") S.s = v; else S.lx = v;
+        renderLinear();
+      });
+    });
+    $("lin-res").addEventListener("change", function (e) { S.showResiduals = e.target.checked; renderLinear(); });
+    $("lin-fit").addEventListener("click", function () {
+      var o = ols(S.ys);
+      S.a = o.a; S.s = o.s;
+      $("lin-msg").textContent = "OLS line refitted to the ten current samples.";
+      renderLinear();
+    });
+    $("lin-prev").addEventListener("click", function () { if (S.linStep > 0) { S.linStep--; renderLinear(); } });
+    $("lin-next").addEventListener("click", function () { if (S.linStep < LIN_STEPS.length - 1) { S.linStep++; renderLinear(); } });
+
+    // section 2
+    $("cost-data-table").addEventListener("change", function (e) {
+      var el = e.target;
+      if (!el.matches("input")) return;
+      var v = Number(el.value);
+      if (el.value === "" || !isFinite(v) || v < 0 || v > 100) { el.value = S.ys[Number(el.dataset.i)]; return; }
+      S.ys[Number(el.dataset.i)] = v;
+      linTable(); renderLinear(); renderCost(); gdInit(20, 2);
+      $("gd-msg").textContent = "Scores changed, so training restarted from b₀ = 20 and b₁ = 2.";
+    });
+    $("cost-b0").addEventListener("input", function (e) { S.trial.a = parseFloat(e.target.value); renderCost(); });
+    $("cost-b1").addEventListener("input", function (e) { S.trial.s = parseFloat(e.target.value); renderCost(); });
+    $("cost-fit").addEventListener("click", function () {
+      var o = ols(S.ys);
+      S.trial.a = o.a; S.trial.s = o.s;
+      syncSlider("cost-b0", o.a); syncSlider("cost-b1", o.s);
+      renderCost();
+    });
+    $("cost-send").addEventListener("click", function () {
+      $("gd-start-b0").value = S.trial.a; $("gd-start-b1").value = S.trial.s;
+      gdInit(S.trial.a, S.trial.s);
+      showTab("gd");
+    });
+
+    // section 3
+    $("gd-restart").addEventListener("click", function () {
+      var a = parseFloat($("gd-start-b0").value), s = parseFloat($("gd-start-b1").value);
+      if ($("gd-start-b0").value === "" || $("gd-start-b1").value === "" || !isFinite(a) || !isFinite(s) || Math.abs(a) > 100 || Math.abs(s) > 20) {
+        $("gd-msg").textContent = "Starting intercept must be within −100 to 100, slope within −20 to 20.";
+        return;
+      }
+      gdInit(a, s);
+    });
+    $("gd-step").addEventListener("click", function () {
+      gdPause();
+      var ok = gdTick();
+      if (ok) $("gd-msg").textContent = "One step done. All ten samples were used to compute the gradients.";
+      renderGD();
+    });
+    $("gd-run").addEventListener("click", function () {
+      if (S.gdTimer) { gdPause(); $("gd-msg").textContent = "Paused. Parameters and history are kept while the page stays open."; return; }
+      $("gd-run").textContent = "Ⅱ Pause";
+      $("gd-alpha").disabled = true;
+      $("gd-speed").disabled = true;
+      $("gd-msg").textContent = "Training. Every update uses all ten samples.";
+      S.gdTimer = setInterval(function () {
+        var per = parseInt($("gd-speed").value, 10);
+        for (var i = 0; i < per; i++) { if (!gdTick()) break; }
+        renderGD();
+      }, 200);
+    });
+
+    // section 4
+    $("log-data-table").addEventListener("change", function (e) {
+      var el = e.target;
+      S.labels[Number(el.dataset.i)] = Number(el.value);
+      $("log-msg").textContent = "Label changed. Press “Train” to update the weights.";
+      renderLogistic();
+    });
+    $("log-w").addEventListener("input", function (e) { S.w = parseFloat(e.target.value); renderLogistic(); });
+    $("log-b").addEventListener("input", function (e) { S.b = parseFloat(e.target.value); renderLogistic(); });
+    $("log-t").addEventListener("input", function (e) { S.t = parseFloat(e.target.value); renderLogistic(); });
+    $("log-x").addEventListener("input", function (e) { S.cx = parseFloat(e.target.value); renderLogistic(); });
+    $("log-prev").addEventListener("click", function () { if (S.logStep > 0) { S.logStep--; renderLogistic(); } });
+    $("log-next").addEventListener("click", function () { if (S.logStep < LOG_STEPS.length - 1) { S.logStep++; renderLogistic(); } });
+    $("log-fit").addEventListener("click", function () {
+      var unique = S.labels.filter(function (v, i, arr) { return arr.indexOf(v) === i; });
+      if (unique.length < 2) { $("log-msg").textContent = "Training needs at least one sample of each class. Parameters left unchanged."; return; }
+      var r = fitLogistic(S.labels);
+      if (r.status !== "converged") { $("log-msg").textContent = "The classes may be perfectly separable, so no finite best weights exist here. Use the sliders or vary the labels."; return; }
+      S.w = r.w; S.b = r.b;
+      syncSlider("log-w", r.w); syncSlider("log-b", r.b);
+      $("log-msg").textContent = "Training finished. The sliders show rounded values; the model uses full precision.";
+      renderLogistic();
+    });
+    $("log-zero").addEventListener("click", function () {
+      S.w = 0; S.b = 0; syncSlider("log-w", 0); syncSlider("log-b", 0);
+      $("log-gd-out").textContent = "Start: w = 0, b = 0. Every probability is 0.5, so log loss = " + nf(logLoss(S.labels, 0, 0)) + ".";
+      renderLogistic();
+    });
+    $("log-gd").addEventListener("click", function () {
+      var gw = 0, gb = 0;
+      for (var i = 0; i < S.labels.length; i++) {
+        var e = sig(S.w * (i + 1) + S.b) - S.labels[i];
+        gw += e * (i + 1) / S.labels.length;
+        gb += e / S.labels.length;
+      }
+      var ow = S.w, ob = S.b, ol = logLoss(S.labels, S.w, S.b);
+      S.w -= 0.01 * gw; S.b -= 0.01 * gb;
+      syncSlider("log-w", S.w); syncSlider("log-b", S.b);
+      $("log-gd-out").textContent = "Gradient w = " + nf(gw) + ", gradient b = " + nf(gb) + ". w: " + nf(ow) + " − 0.01 × (" + nf(gw) + ") = " + nf(S.w, 6) + ". b: " + nf(ob) + " − 0.01 × (" + nf(gb) + ") = " + nf(S.b, 6) + ". Log loss: " + nf(ol, 6) + " → " + nf(logLoss(S.labels, S.w, S.b), 6) + ".";
+      renderLogistic();
+    });
+
+    // keyboard support for the step buttons
+    [
+      ["lin-step", "ArrowRight", "lin-next"], ["lin-step", "ArrowLeft", "lin-prev"],
+      ["log-step", "ArrowRight", "log-next"], ["log-step", "ArrowLeft", "log-prev"]
+    ].forEach(function (pair) {
+      $(pair[0]).addEventListener("keydown", function (e) {
+        if (e.key === pair[1]) { e.preventDefault(); $(pair[2]).click(); }
+      });
+      $(pair[0]).tabIndex = 0;
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden && S.gdTimer) { gdPause(); $("gd-msg").textContent = "Animation paused because the page is hidden."; }
+    });
+
+    // first paint
+    linTable(); costTable(); logTable();
+    renderLinear(); renderCost(); renderLogistic(); gdInit(20, 2);
+    showTab("linear");
+  })();
+</script>

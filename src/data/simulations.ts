@@ -33,7 +33,7 @@ export const coursePages: CoursePage[] = [
 
 // Order in which materials are listed on a course page.
 // Materials not listed here appear after these, alphabetically.
-export const materialOrder: string[] = ["Classification", "Set Theory"];
+export const materialOrder: string[] = ["Classification", "Regression", "Evaluation", "Set Theory"];
 
 export const simulations: Simulation[] = [
   {
@@ -44,6 +44,26 @@ export const simulations: Simulation[] = [
     summary:
       "A guided path in plain words: the theory first (probability, Bayes' theorem, the naive idea), then step-by-step examples (spam, Play Golf, Laplace smoothing, Gaussian NB), then practice questions with hints.",
     topics: ["Bayes' theorem", "Laplace smoothing", "Gaussian NB"],
+    updated: "2026-11",
+  },
+  {
+    slug: "regression",
+    courseId: "fundamen-sains-data",
+    material: "Regression",
+    title: "Regression, Cost and Gradient Descent",
+    summary:
+      "Four connected sections on ten made-up students: fit a line with OLS, score it with a cost function, let gradient descent walk downhill, then turn a score into a pass/fail probability with logistic regression.",
+    topics: ["Linear regression", "Cost function", "Gradient descent", "Logistic regression"],
+    updated: "2026-11",
+  },
+  {
+    slug: "model-evaluation",
+    courseId: "fundamen-sains-data",
+    material: "Evaluation",
+    title: "Model Evaluation Practice",
+    summary:
+      "Three exercises with a guess-first mode: read a confusion matrix and compute accuracy, precision, recall and F1; choose the right metric for three applications; diagnose overfitting and check a cross-validation mean.",
+    topics: ["Confusion matrix", "Precision & recall", "F1-score", "Cross-validation"],
     updated: "2026-11",
   },
   {

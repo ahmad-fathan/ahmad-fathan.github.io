@@ -1,0 +1,40 @@
+---
+import Layout from "../../../components/Layout.astro";
+import PageHeader from "../../../components/PageHeader.astro";
+import EvaluationSim from "../../../components/simulations/EvaluationSim.astro";
+---
+
+<Layout
+  path="/teaching/data-science-fundamentals/model-evaluation"
+  title="Model Evaluation: Interactive Practice — Ahmad Fathan Hidayatullah"
+  description="Interactive practice on confusion matrices, precision, recall, F1-score, generalisation and cross-validation, with a guess-first mode and full answer keys."
+>
+  <PageHeader
+    eyebrow="Data Science Fundamentals · Evaluation"
+    title="Model Evaluation Practice"
+    lede="Three short exercises: read a confusion matrix, choose the right metric for an application, then diagnose overfitting and underfitting."
+  />
+
+  <div class="container-site py-10">
+    <nav class="mb-6 text-sm text-muted" aria-label="Breadcrumb">
+      <a href="/teaching" class="font-medium text-primary hover:text-primary-dark">Teaching</a>
+      <span class="mx-1.5">/</span>
+      <a href="/teaching/data-science-fundamentals" class="font-medium text-primary hover:text-primary-dark">Data Science Fundamentals</a>
+      <span class="mx-1.5">/</span>
+      <span>Model Evaluation</span>
+    </nav>
+
+    <EvaluationSim />
+
+    <section class="mt-14 max-w-3xl">
+      <h2 class="text-xl font-bold tracking-tight">How to use this page</h2>
+      <ul class="mt-3 list-disc space-y-2 pl-6 text-muted marker:text-primary">
+        <li><b class="text-ink">Guess mode</b> is on by default. At every step you commit to an answer first; wrong options are crossed out and given a hint.</li>
+        <li><b class="text-ink">Exercise 1</b>: 500 patients, 50 of them sick. Name the four cells, then compute the four metrics and see why accuracy misleads.</li>
+        <li><b class="text-ink">Exercise 2</b>: three applications. Decide whether a false positive or a false negative costs more, and pick the metric that follows.</li>
+        <li><b class="text-ink">Exercise 3</b>: three models. Compare training and testing scores, diagnose each one, and check the cross-validation mean.</li>
+        <li>Use the arrow keys to move between steps, and the numbered circles to jump straight to one. The last step is a full answer key for each exercise.</li>
+      </ul>
+    </section>
+  </div>
+</Layout>

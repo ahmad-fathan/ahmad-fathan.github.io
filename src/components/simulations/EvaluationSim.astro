@@ -1,0 +1,612 @@
+---
+// Model evaluation practice: three short exercises with a guess-first mode.
+//   1. A 500-patient screening model — name the four cells, compute accuracy,
+//      precision, recall and F1, then see why accuracy lies on imbalanced data.
+//   2. Three applications — which mistake is more expensive, and which metric follows.
+//   3. Three models — overfitting, underfitting, good fit — plus cross-validation.
+// No network, no dependency. All numbers are fixed so the answer key can be checked by hand.
+---
+
+<div class="evalsim" id="evalsim">
+  <div class="ev-top">
+    <label class="ev-switch"><input type="checkbox" id="ev-guess" checked> Guess before you see the answer</label>
+  </div>
+
+  <nav class="ev-tabs" id="ev-tabs" role="tablist" aria-label="Choose an exercise"></nav>
+
+  <div class="ev-grid">
+    <div class="ev-board-col">
+      <div class="ev-card">
+        <p class="ev-eyebrow">The question</p>
+        <div id="ev-task" class="ev-task"></div>
+        <div id="ev-board"></div>
+      </div>
+
+      <div class="ev-card" id="ev-sheet-card">
+        <p class="ev-eyebrow">Worksheet</p>
+        <ol class="ev-sheet" id="ev-sheet"></ol>
+      </div>
+    </div>
+
+    <div class="ev-card ev-step-card" id="ev-card" aria-live="polite"></div>
+  </div>
+
+  <div class="ev-controls">
+    <div class="ev-btns">
+      <button type="button" class="ev-btn" id="ev-prev">← Back</button>
+      <button type="button" class="ev-btn ev-primary" id="ev-next">Next →</button>
+      <button type="button" class="ev-btn" id="ev-restart">Start over</button>
+    </div>
+    <div class="ev-dots" id="ev-dots"></div>
+  </div>
+
+  <p class="ev-foot">
+    Use ← and → on your keyboard to move between steps. A blue outline marks the cells being used;
+    yellow marks the new result.
+  </p>
+</div>
+
+<style is:global>
+  .evalsim {
+    --ev-bg: #ffffff; --ev-card: #ffffff; --ev-soft: #f8fafc; --ev-ink: #0f172a; --ev-muted: #5b6573;
+    --ev-line: #e2e8f0; --ev-primary: #2563eb; --ev-primary-soft: #eff6ff; --ev-new: #fef9c3;
+    --ev-new-ink: #4a3b00; --ev-bad: #dc2626; --ev-bad-soft: #fef2f2; --ev-good: #16a34a;
+    --ev-good-soft: #f0fdf4; --ev-warn: #d97706; --ev-warn-soft: #fff7ed;
+    color: var(--ev-ink); font-size: 1rem; line-height: 1.6;
+  }
+  .evalsim[data-theme="dark"] {
+    --ev-bg: #0b1220; --ev-card: #111a2e; --ev-soft: #16213a; --ev-ink: #e5e9f0; --ev-muted: #9aa6b8;
+    --ev-line: #26324a; --ev-primary: #60a5fa; --ev-primary-soft: #172554; --ev-new: #3a3410;
+    --ev-new-ink: #fbe98a; --ev-bad: #f87171; --ev-bad-soft: #2a1414; --ev-good: #4ade80;
+    --ev-good-soft: #10261a; --ev-warn: #fbbf24; --ev-warn-soft: #2a2110;
+  }
+  .evalsim *, .evalsim *::before, .evalsim *::after { box-sizing: border-box; }
+  .evalsim p { margin: 0 0 0.55rem; }
+  .evalsim p:last-child { margin-bottom: 0; }
+  .evalsim .ev-top { display: flex; justify-content: flex-end; margin-bottom: 0.7rem; }
+  .evalsim .ev-switch { display: flex; align-items: center; gap: 0.45rem; font-size: 0.86rem; color: var(--ev-muted); cursor: pointer; }
+  .evalsim .ev-switch input { width: 1rem; height: 1rem; accent-color: var(--ev-primary); }
+
+  .evalsim .ev-tabs { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
+  .evalsim .ev-tab {
+    flex: 1 1 12rem; text-align: left; font: inherit; padding: 0.5rem 0.75rem; border-radius: 0.55rem;
+    border: 1px solid var(--ev-line); background: var(--ev-card); color: var(--ev-muted); cursor: pointer;
+  }
+  .evalsim .ev-tab span { display: block; font-weight: 700; font-size: 0.92rem; color: var(--ev-ink); }
+  .evalsim .ev-tab small { display: block; font-size: 0.78rem; }
+  .evalsim .ev-tab[aria-selected="true"] { border-color: var(--ev-primary); background: var(--ev-primary-soft); box-shadow: inset 0 -3px 0 var(--ev-primary); }
+
+  .evalsim .ev-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+  .evalsim .ev-board-col > * { margin-bottom: 1rem; }
+  .evalsim .ev-board-col > *:last-child { margin-bottom: 0; }
+  .evalsim .ev-card { background: var(--ev-card); border: 1px solid var(--ev-line); border-radius: 0.8rem; padding: 1rem 1.1rem; min-width: 0; }
+  .evalsim .ev-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ev-primary); margin-bottom: 0.35rem; }
+  .evalsim .ev-task { font-size: 0.94rem; }
+  .evalsim .ev-task ol { margin: 0.35rem 0 0; padding-left: 1.15rem; }
+  .evalsim .ev-task li { margin: 0.1rem 0; }
+  .evalsim .ev-off { display: none !important; }
+  .evalsim .ev-scroll { overflow-x: auto; }
+
+  .evalsim table.ev-cm { border-collapse: separate; border-spacing: 0.35rem; font-variant-numeric: tabular-nums; margin-top: 0.5rem; }
+  .evalsim table.ev-cm th { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ev-muted); padding: 0.25rem 0.4rem; text-align: center; line-height: 1.3; }
+  .evalsim table.ev-cm th.rowh { text-align: left; }
+  .evalsim table.ev-cm td { min-width: 6.2rem; padding: 0.55rem 0.6rem; border-radius: 0.55rem; background: var(--ev-soft); border: 2px solid transparent; text-align: center; }
+  .evalsim table.ev-cm td .num { display: block; font-size: 1.35rem; font-weight: 700; line-height: 1.15; }
+  .evalsim table.ev-cm td .lab { display: block; font-size: 0.76rem; color: var(--ev-muted); min-height: 1rem; }
+  .evalsim table.ev-cm td.diag { background: var(--ev-primary-soft); }
+  .evalsim table.ev-cm td.err { background: var(--ev-warn-soft); }
+  .evalsim table.ev-cm td.tot { background: transparent; font-weight: 600; color: var(--ev-muted); min-width: 0; }
+  .evalsim td.used, .evalsim .ev-sc.used { border-color: var(--ev-primary) !important; }
+  .evalsim td.new, .evalsim .ev-sc.new, .evalsim .ev-row.new td, .evalsim .ev-row.new th { background: var(--ev-new) !important; color: var(--ev-new-ink); }
+  .evalsim td.new .lab { color: var(--ev-new-ink); }
+
+  .evalsim .ev-scs { display: grid; gap: 0.6rem; margin-top: 0.5rem; }
+  .evalsim .ev-sc { border: 2px solid var(--ev-line); border-radius: 0.6rem; padding: 0.7rem 0.85rem; }
+  .evalsim .ev-sc h3 { font-size: 0.96rem; margin: 0 0 0.15rem; }
+  .evalsim .ev-sc .desc { font-size: 0.84rem; color: var(--ev-muted); }
+  .evalsim .ev-sc dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 0.75rem; margin: 0.4rem 0 0; font-size: 0.84rem; }
+  .evalsim .ev-sc dt { color: var(--ev-muted); font-size: 0.78rem; }
+  .evalsim .ev-sc dd { margin: 0; }
+  .evalsim .ev-q-mark { color: var(--ev-muted); }
+  .evalsim .ev-fill { padding: 0 0.2rem; border-radius: 0.25rem; }
+  .evalsim .ev-fill.new { background: var(--ev-new); color: var(--ev-new-ink); }
+
+  .evalsim table.ev-mt { border-collapse: separate; border-spacing: 0.3rem; width: 100%; font-variant-numeric: tabular-nums; margin-top: 0.5rem; }
+  .evalsim table.ev-mt th { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ev-muted); padding: 0.25rem; text-align: center; }
+  .evalsim table.ev-mt th.rowh { text-align: left; }
+  .evalsim table.ev-mt td { padding: 0.5rem 0.55rem; border-radius: 0.5rem; background: var(--ev-soft); text-align: center; border: 2px solid transparent; }
+  .evalsim table.ev-mt td.name { text-align: left; font-weight: 700; }
+  .evalsim table.ev-mt td.pending { color: var(--ev-muted); }
+  .evalsim .ev-pill { display: inline-block; font-size: 0.76rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1.5px solid currentColor; }
+  .evalsim .p-over { color: var(--ev-bad); }
+  .evalsim .p-under { color: var(--ev-warn); }
+  .evalsim .p-good { color: var(--ev-good); }
+  .evalsim .ev-folds { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-top: 0.7rem; font-size: 0.84rem; }
+  .evalsim .ev-fold { padding: 0.25rem 0.5rem; border-radius: 0.4rem; background: var(--ev-soft); border: 2px solid transparent; font-variant-numeric: tabular-nums; }
+  .evalsim .ev-fold.used { border-color: var(--ev-primary); }
+  .evalsim .ev-avg { padding: 0.25rem 0.5rem; border-radius: 0.4rem; border: 2px dashed var(--ev-line); color: var(--ev-muted); }
+  .evalsim .ev-avg.new { background: var(--ev-new); color: var(--ev-new-ink); border-style: solid; }
+
+  .evalsim .ev-sheet { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+  .evalsim .ev-sheet li { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: 0.5rem; align-items: baseline; padding: 0.4rem 0.5rem; border-radius: 0.4rem; background: var(--ev-soft); font-size: 0.88rem; }
+  .evalsim .ev-sheet li.new { background: var(--ev-new); color: var(--ev-new-ink); }
+  .evalsim .ev-sheet .no { font-weight: 700; color: var(--ev-muted); }
+  .evalsim .ev-sheet li.new .no { color: var(--ev-new-ink); }
+  .evalsim .ev-sheet .k { font-weight: 700; margin-right: 0.35rem; }
+  .evalsim .ev-sheet .empty { color: var(--ev-muted); }
+
+  .evalsim .ev-step-card { display: flex; flex-direction: column; gap: 0.6rem; }
+  .evalsim .ev-stepno { font-size: 0.76rem; font-weight: 700; letter-spacing: 0.05em; color: var(--ev-muted); }
+  .evalsim .ev-chip { display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.12rem 0.5rem; border-radius: 999px; border: 1.5px solid currentColor; width: max-content; }
+  .evalsim .c-id { color: var(--ev-primary); }
+  .evalsim .c-calc { color: var(--ev-warn); }
+  .evalsim .c-interp { color: #7c3aed; }
+  .evalsim .c-diag { color: var(--ev-good); }
+  .evalsim[data-theme="dark"] .evalsim .c-interp { color: #a78bfa; }
+  .evalsim .ev-h { font-size: 1.12rem; font-weight: 700; margin: 0; line-height: 1.35; }
+  .evalsim dl.ev-rows { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.35rem 0.8rem; margin: 0; font-size: 0.9rem; }
+  .evalsim dl.ev-rows dt { color: var(--ev-muted); font-size: 0.8rem; padding-top: 0.1rem; }
+  .evalsim dl.ev-rows dd { margin: 0; min-width: 0; overflow-x: auto; }
+  .evalsim .ev-say { margin: 0; font-size: 0.94rem; }
+  .evalsim .ev-why { margin: 0; font-size: 0.86rem; color: var(--ev-muted); border-left: 3px solid var(--ev-line); padding-left: 0.7rem; }
+  .evalsim .ev-warnbox { font-size: 0.88rem; background: var(--ev-warn-soft); border-left: 3px solid var(--ev-warn); border-radius: 0 0.4rem 0.4rem 0; padding: 0.55rem 0.75rem; }
+  .evalsim .ev-formula { background: var(--ev-soft); border-radius: 0.5rem; padding: 0.6rem 0.8rem; font-family: "STIX Two Text", "Cambria Math", "Times New Roman", serif; font-size: 1rem; overflow-x: auto; }
+  .evalsim .ev-formula .ev-frac { display: inline-flex; flex-direction: column; text-align: center; vertical-align: middle; margin: 0 0.15rem; line-height: 1.15; }
+  .evalsim .ev-formula .ev-frac > span:first-child { border-bottom: 1.5px solid currentColor; padding: 0 0.25rem 0.1rem; }
+  .evalsim .ev-formula .ev-frac > span:last-child { padding-top: 0.1rem; }
+  .evalsim .ev-formula .cap { display: block; font-family: inherit; font-size: 0.82rem; color: var(--ev-muted); margin-top: 0.35rem; }
+  .evalsim .ev-guess { display: flex; flex-direction: column; gap: 0.4rem; }
+  .evalsim .ev-opts { display: flex; flex-direction: column; gap: 0.4rem; }
+  .evalsim .ev-opt { text-align: left; font: inherit; font-size: 0.92rem; padding: 0.5rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--ev-line); background: var(--ev-card); color: var(--ev-ink); cursor: pointer; }
+  .evalsim .ev-opt:hover { border-color: var(--ev-primary); }
+  .evalsim .ev-opt.wrong { border-color: var(--ev-bad); color: var(--ev-bad); text-decoration: line-through; opacity: 0.75; cursor: default; }
+  .evalsim .ev-hint { font-size: 0.86rem; color: var(--ev-muted); min-height: 1.4em; margin: 0; }
+  .evalsim .ev-verdict { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.8rem 0.9rem; border-radius: 0.6rem; background: var(--ev-good-soft); }
+  .evalsim .ev-verdict b { font-size: 1rem; color: var(--ev-good); }
+  .evalsim table.ev-key { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .evalsim table.ev-key th, .evalsim table.ev-key td { border-bottom: 1px solid var(--ev-line); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+  .evalsim table.ev-key th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ev-muted); }
+
+  .evalsim .ev-controls { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; justify-content: space-between; margin-top: 1rem; }
+  .evalsim .ev-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .evalsim .ev-btn { font: inherit; font-size: 0.88rem; font-weight: 600; padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--ev-line); background: var(--ev-card); color: var(--ev-ink); cursor: pointer; }
+  .evalsim .ev-btn.ev-primary { background: var(--ev-primary); border-color: var(--ev-primary); color: #fff; }
+  .evalsim[data-theme="dark"] .ev-btn.ev-primary { color: #0b1220; }
+  .evalsim .ev-btn:disabled { opacity: 0.45; cursor: default; }
+  .evalsim .ev-dots { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .evalsim .ev-dot { width: 1.9rem; height: 1.9rem; padding: 0; border-radius: 50%; font: inherit; font-size: 0.76rem; font-weight: 700; color: var(--ev-muted); border: 1px solid var(--ev-line); background: var(--ev-card); cursor: pointer; }
+  .evalsim .ev-dot.done { background: var(--ev-primary-soft); border-color: var(--ev-primary); color: var(--ev-primary); }
+  .evalsim .ev-dot.cur { background: var(--ev-primary); border-color: var(--ev-primary); color: #fff; }
+  .evalsim[data-theme="dark"] .ev-dot.cur { color: #0b1220; }
+  .evalsim .ev-foot { font-size: 0.8rem; color: var(--ev-muted); margin-top: 0.9rem; }
+
+  @media (max-width: 900px) { .evalsim .ev-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) {
+    .evalsim .ev-card { padding: 0.75rem 0.8rem; }
+    .evalsim table.ev-cm td { min-width: 4.6rem; padding: 0.4rem; }
+    .evalsim table.ev-cm td .num { font-size: 1.1rem; }
+  }
+</style>
+
+<script is:inline>
+  // Model evaluation practice. Fixed numbers on purpose: every answer can be checked by hand.
+  (function () {
+    var root = document.getElementById("evalsim");
+    if (!root) return;
+    var $ = function (id) { return document.getElementById(id); };
+
+    var frac = function (a, b) { return '<span class="ev-frac"><span>' + a + "</span><span>" + b + "</span></span>"; };
+    var m = function (s) { return '<span style="font-family:\'STIX Two Text\',\'Cambria Math\',serif;font-style:italic">' + s + "</span>"; };
+    var TP = m("TP"), TN = m("TN"), FP = m("FP"), FN = m("FN");
+    var SUB = function (s) { return '<sub>' + s + "</sub>"; };
+    var F1 = m("F") + SUB("1");
+
+    var KIND = {
+      id: { cls: "c-id", label: "Identify" },
+      calc: { cls: "c-calc", label: "Compute" },
+      interp: { cls: "c-interp", label: "Interpret" },
+      diag: { cls: "c-diag", label: "Diagnose" }
+    };
+    var FORM = {
+      acc: { f: "Accuracy = " + frac(TP + " + " + TN, TP + " + " + TN + " + " + FP + " + " + FN), cap: "Equation 1. The share of all predictions that were right." },
+      prec: { f: "Precision = " + frac(TP, TP + " + " + FP), cap: "Equation 2. The denominator is one column: everything predicted Positive." },
+      rec: { f: "Recall = " + frac(TP, TP + " + " + FN), cap: "Equation 3. The denominator is one row: everything actually Positive." },
+      f1: { f: F1 + " = 2 × " + frac("Precision × Recall", "Precision + Recall"), cap: "Equation 4. A harmonic mean, so it drops sharply when one metric is low." }
+    };
+
+    // ---------- boards ----------
+    function keyClass(st, k) {
+      var out = [];
+      if (st.used.has(k)) out.push("used");
+      if (st.nw.has(k)) out.push("new");
+      return out.join(" ");
+    }
+
+    function boardMatrix(st) {
+      var cell = function (k, num, kind) {
+        var shown = st.rev.has(k) || st.nw.has(k);
+        return '<td class="' + kind + " " + keyClass(st, k) + '"><span class="num">' + num + '</span><span class="lab">' + (shown ? m(k) : "?") + "</span></td>";
+      };
+      return '<div class="ev-scroll"><table class="ev-cm">' +
+        "<tr><th></th><th>Predicted Positive<br>(sick)</th><th>Predicted Negative<br>(healthy)</th><th>Total</th></tr>" +
+        '<tr><th class="rowh">Actual Positive<br>(sick)</th>' + cell("TP", 40, "diag") + cell("FN", 10, "err") + '<td class="tot ' + keyClass(st, "rowP") + '">50</td></tr>' +
+        '<tr><th class="rowh">Actual Negative<br>(healthy)</th>' + cell("FP", 45, "err") + cell("TN", 405, "diag") + '<td class="tot ' + keyClass(st, "rowN") + '">450</td></tr>' +
+        '<tr><th></th><td class="tot ' + keyClass(st, "colP") + '">85</td><td class="tot">415</td><td class="tot ' + keyClass(st, "all") + '">500</td></tr>' +
+        "</table></div>";
+    }
+
+    var SCN = [
+      { k: "a", t: "a. Job application screener", d: "The system automatically rejects applicants judged unqualified.",
+        pos: "applicant judged unqualified (rejected)", err: FP + ": a suitable applicant is rejected", met: "Precision" },
+      { k: "b", t: "b. Campus network intrusion detection", d: "The system watches network traffic and flags attacks.",
+        pos: "attack activity", err: FN + ": an attack slips through undetected", met: "Recall" },
+      { k: "c", t: "c. Shopping app promo notifications", d: "The system picks users to send a promotion to.",
+        pos: "user judged interested (gets the notification)", err: FP + ": an uninterested user is notified anyway", met: "Precision" }
+    ];
+
+    function boardScen(st) {
+      var fill = function (k, val) {
+        var shown = st.rev.has(k) || st.nw.has(k);
+        if (!shown) return '<span class="ev-q-mark">?</span>';
+        return '<span class="ev-fill ' + (st.nw.has(k) ? "new" : "") + '">' + val + "</span>";
+      };
+      return '<div class="ev-scs">' + SCN.map(function (s) {
+        return '<div class="ev-sc ' + keyClass(st, s.k) + '">' +
+          "<h3>" + s.t + "</h3><span class=\"desc\">" + s.d + "</span>" +
+          "<dl><dt>Positive</dt><dd>" + fill(s.k + "_pos", s.pos) + "</dd>" +
+          "<dt>Costly mistake</dt><dd>" + fill(s.k + "_err", s.err) + "</dd>" +
+          "<dt>Main metric</dt><dd>" + fill(s.k + "_met", "<b>" + s.met + "</b>") + "</dd></dl></div>";
+      }).join("") + "</div>";
+    }
+
+    var MOD = [
+      { k: "P", tr: 98, te: 71, gap: 27, d: "Overfitting", p: "p-over" },
+      { k: "Q", tr: 66, te: 64, gap: 2, d: "Underfitting", p: "p-under" },
+      { k: "R", tr: 88, te: 86, gap: 2, d: "Good fit", p: "p-good" }
+    ];
+    var FOLDS = [85, 87, 86, 88, 84];
+
+    function boardModels(st) {
+      var show = function (k) { return st.rev.has(k) || st.nw.has(k); };
+      var td = function (k, val) {
+        return "<td class=\"" + (show(k) ? keyClass(st, k) : "pending") + "\">" + (show(k) ? val : "?") + "</td>";
+      };
+      var cvShown = show("cv");
+      return '<div class="ev-scroll"><table class="ev-mt">' +
+        '<tr><th class="rowh">Model</th><th>Training</th><th>Testing</th><th>Gap</th><th>Diagnosis</th></tr>' +
+        MOD.map(function (r) {
+          return '<tr class="' + keyClass(st, "row" + r.k) + '"><td class="name">Model ' + r.k + "</td><td>" + r.tr + "%</td><td>" + r.te + "%</td>" +
+            td("gap" + r.k, r.gap + " points") +
+            '<td class="' + (show("d" + r.k) ? (st.nw.has("d" + r.k) ? "new" : "") : "pending") + '">' +
+            (show("d" + r.k) ? '<span class="ev-pill ' + r.p + '">' + r.d + "</span>" : "?") + "</td></tr>";
+        }).join("") + "</table></div>" +
+        '<div class="ev-folds"><span>5-fold CV for Model R:</span>' +
+        FOLDS.map(function (v, i) {
+          return '<span class="ev-fold ' + (st.used.has("folds") ? "used" : "") + '">Fold ' + (i + 1) + ": " + v + "%</span>";
+        }).join("") +
+        '<span class="ev-avg ' + (st.nw.has("cv") ? "new" : cvShown ? "" : "") + '">Average: ' + (cvShown ? "86%" : "?") + "</span></div>";
+    }
+
+    // ---------- exercises ----------
+    var CASES = [
+      {
+        id: "l1", title: "Exercise 1", sub: "Screening test, 500 patients", board: boardMatrix,
+        task: 'A screening model was tested on 500 patients. Positive means the patient has the disease.' +
+          '<ol type="a"><li>Name ' + TP + ", " + TN + ", " + FP + " and " + FN + ".</li>" +
+          "<li>Compute accuracy, precision, recall and F1-score.</li>" +
+          "<li>Explain why accuracy can mislead here, and which metric matters most.</li></ol>",
+        intro: "The plan: label the four cells of the confusion matrix, compute the four metrics with Equations 1 to 4, then compare our model with the laziest possible model. Note that the classes are unbalanced: only 50 of the 500 patients are sick.",
+        steps: [
+          { kind: "id", title: "Find the correct predictions", q: "Which cell holds the True Positives?",
+            opts: [{ t: "40: sick patients predicted sick", ok: 1 },
+                   { t: "405: healthy patients predicted healthy", h: "That is True Negative: correct, but the class is Negative." },
+                   { t: "45: healthy patients predicted sick", h: "The prediction is Positive but the truth is healthy. That is a mistake." }],
+            use: ["TP", "TN"], reveal: ["TP", "TN"], line: { k: TP + " and " + TN, v: TP + " = 40, " + TN + " = 405" },
+            say: "The main diagonal holds the correct predictions. " + TP + " = 40 sick patients were caught, and " + TN + " = 405 healthy patients were left alone.",
+            why: "Rows are the truth, columns are the prediction." },
+          { kind: "id", title: "Name the two kinds of mistake", q: "A healthy patient predicted sick lands in which cell?",
+            opts: [{ t: FP + " = 45", ok: 1 },
+                   { t: FN + " = 10", h: "False Negative is a sick patient predicted healthy." },
+                   { t: TN + " = 405", h: "The prediction is wrong, so it cannot be True." }],
+            use: ["FP", "FN"], reveal: ["FP", "FN"], line: { k: FP + " and " + FN, v: FP + " = 45, " + FN + " = 10" },
+            say: FP + " = 45 healthy patients were flagged (a false alarm). " + FN + " = 10 sick patients were missed.",
+            why: "The second word follows the prediction. The first word says whether the prediction was right." },
+          { kind: "calc", form: "acc", title: "Compute accuracy", q: "What is the accuracy?",
+            opts: [{ t: "0.89 (89%)", ok: 1 },
+                   { t: "0.08 (8%)", h: "The top is every correct prediction, TP + TN, not TP alone." },
+                   { t: "0.90 (90%)", h: "Recount: 40 + 405 = 445." }],
+            use: ["TP", "TN", "all"], line: { k: "Accuracy", v: frac("40 + 405", "500") + " = " + frac("445", "500") + " = 0.89" },
+            say: "89% of patients were classified correctly. That looks high, but it says nothing about the kind of mistake." },
+          { kind: "calc", form: "prec", title: "Compute precision", q: "What is the precision?",
+            opts: [{ t: "0.471", ok: 1 },
+                   { t: "0.800", h: "That is recall. Precision uses the Predicted Positive column: TP + FP = 85." },
+                   { t: "0.889", h: "The denominator is TP + FP, not FP alone." }],
+            use: ["TP", "FP", "colP"], line: { k: "Precision", v: frac("40", "40 + 45") + " ≈ 0.471" },
+            say: "Of the 85 patients flagged as sick, only about 47.1% really were. More than half of the alarms were false." },
+          { kind: "calc", form: "rec", title: "Compute recall", q: "What is the recall?",
+            opts: [{ t: "0.800", ok: 1 },
+                   { t: "0.471", h: "That is precision. Recall uses the Actual Positive row: TP + FN = 50." },
+                   { t: "0.089", h: "The denominator is only the patients who really were sick: 50." }],
+            use: ["TP", "FN", "rowP"], line: { k: "Recall", v: frac("40", "40 + 10") + " = 0.800" },
+            say: "The model found 80% of the sick patients. Ten sick patients were still missed.",
+            why: "Precision and recall share the same top, " + TP + ". Only the bottom differs: a column for precision, a row for recall." },
+          { kind: "calc", form: "f1", title: "Compute the F1-score", q: "What is the F1-score?",
+            opts: [{ t: "0.593", ok: 1 },
+                   { t: "0.635", h: "That is the plain average (0.471 + 0.800) / 2. F1 uses the harmonic mean." },
+                   { t: "0.376", h: "That is just Precision × Recall. Multiply by 2 and divide by their sum." }],
+            use: [], line: { k: "F1-score", v: "2 × " + frac("0.471 × 0.800", "0.471 + 0.800") + " ≈ 0.593" },
+            say: "F1 is 0.593, far below the 0.89 accuracy. The weak precision drags it down.",
+            why: "A harmonic mean always sits closer to the smaller value, so one weak metric cannot be hidden by the other." },
+          { kind: "interp", title: "Compare with the laziest model", q: 'A model that always says "healthy" scores what accuracy?',
+            opts: [{ t: "0.90 (90%)", ok: 1 },
+                   { t: "0.50 (50%)", h: "Count the healthy patients: 450 of 500." },
+                   { t: "0.10 (10%)", h: "That is the share of sick patients. This model is right on every healthy one." }],
+            use: ["rowN", "all"], line: { k: 'Model that always says "healthy"', v: frac("450", "500") + " = 0.90" },
+            say: "A model that never finds a single sick patient scores 90%, higher than ours (89%).",
+            warn: "This is why accuracy misleads on unbalanced data: the Negative class (450 patients) dominates, so a high accuracy is reachable without finding any sick patient at all." },
+          { kind: "interp", title: "Pick the metric that matters", q: "For disease screening, which metric should we protect?",
+            opts: [{ t: "Recall", ok: 1 },
+                   { t: "Precision", h: "A false positive here only means a follow-up test. Which mistake is more dangerous?" },
+                   { t: "Accuracy", h: "The previous step showed accuracy misleads on this data." }],
+            use: ["FN"], line: { k: "Main metric", v: "<b>Recall</b> (0.800), because " + FN + " is the dangerous one" },
+            say: "A missed sick patient (" + FN + ") gets no treatment, while a false alarm (" + FP + ") only leads to another test. Screening must keep " + FN + " small, so recall comes first.",
+            why: "Precision is still reported: 0.471 means many healthy patients will take an unnecessary follow-up test." }
+        ],
+        key: [["a", TP + " = 40, " + TN + " = 405, " + FP + " = 45, " + FN + " = 10"],
+              ["b", "Accuracy 0.89 · Precision 0.471 · Recall 0.800 · F1 0.593"],
+              ["c", "The all-healthy model already reaches 0.90 accuracy because the classes are unbalanced. Recall matters most: a missed sick patient is worse than a false alarm."]]
+      },
+      {
+        id: "l2", title: "Exercise 2", sub: "Choosing a metric for three apps", board: boardScen, noSheet: true,
+        task: "For each application, decide which mistake is more expensive (false positive or false negative), then pick the metric to prioritise and explain why.",
+        intro: "For each application the same three steps apply: first decide what counts as Positive (the thing the system detects or acts on), then ask which mistake costs more, then pick the metric. A costly FP means precision; a costly FN means recall.",
+        steps: [
+          { kind: "interp", title: "Job screener: which mistake costs more?", q: "Positive = an applicant judged unqualified and rejected. Which mistake hurts more?",
+            opts: [{ t: "False positive: a suitable applicant is rejected", ok: 1 },
+                   { t: "False negative: an unsuitable applicant gets through", h: "That applicant still faces an interview. Which one cannot be fixed later?" },
+                   { t: "Both cost the same", h: "Compare: which one can still be corrected at the next stage?" }],
+            use: ["a"], reveal: ["a_err"],
+            say: "A suitable applicant rejected automatically is gone for good: nobody reviews that decision. An unsuitable applicant who gets through is still filtered at the interview." },
+          { kind: "interp", title: "Job screener: pick the metric", q: "The costly mistake is a false positive. Which metric comes first?",
+            opts: [{ t: "Precision", ok: 1 },
+                   { t: "Recall", h: "Recall suppresses false negatives." },
+                   { t: "Accuracy", h: "Accuracy does not separate the two kinds of mistake." }],
+            use: ["a"], reveal: ["a_met"],
+            say: "High precision means almost everyone rejected really was unqualified.",
+            why: "If Positive were defined as suitable applicants, the same mistake becomes a false negative and the metric becomes recall for the suitable class. The intent does not change: do not reject people who qualify." },
+          { kind: "interp", title: "Intrusion detection: which mistake costs more?", q: "Positive = attack activity. Which mistake is more dangerous?",
+            opts: [{ t: "False negative: the attack goes undetected", ok: 1 },
+                   { t: "False positive: normal traffic flagged as an attack", h: "A false alarm wastes an admin's time; it does not break anything." },
+                   { t: "Both are equally dangerous", h: "Compare the outcomes: a pointless alarm, or leaked campus data?" }],
+            use: ["b"], reveal: ["b_err"],
+            say: "An attack that slips through can leak data or take services offline. A false alarm only adds a check-up." },
+          { kind: "interp", title: "Intrusion detection: pick the metric", q: "The costly mistake is a false negative. Which metric comes first?",
+            opts: [{ t: "Recall", ok: 1 },
+                   { t: "Precision", h: "Precision suppresses false positives." },
+                   { t: "Accuracy", h: "Attacks are rare, so a high accuracy is possible without detecting a single one." }],
+            use: ["b"], reveal: ["b_met"],
+            say: "High recall means almost every real attack was flagged.",
+            why: "This is the fraud-detection case again: the Positive class is rare, and missing one is very expensive." },
+          { kind: "interp", title: "Promo notifications: which mistake costs more?", q: "Positive = a user judged interested and notified. Which mistake hurts more?",
+            opts: [{ t: "False positive: an uninterested user is notified anyway", ok: 1 },
+                   { t: "False negative: an interested user is not notified", h: "A missed sale, but nobody is annoyed." },
+                   { t: "Both cost the same", h: "Which one makes people turn notifications off or uninstall the app?" }],
+            use: ["c"], reveal: ["c_err"],
+            say: "An irrelevant notification annoys people; they mute the app or delete it. Missing one user only costs one lost chance to sell." },
+          { kind: "interp", title: "Promo notifications: pick the metric", q: "The costly mistake is a false positive. Which metric comes first?",
+            opts: [{ t: "Precision", ok: 1 },
+                   { t: "Recall", h: "Recall suppresses false negatives." },
+                   { t: "F1-score", h: "F1 fits when both mistakes matter equally. Here one clearly costs more." }],
+            use: ["c"], reveal: ["c_met"],
+            say: "High precision means the notification only reaches users who want it.",
+            why: "This is the classic case where a false alarm is expensive: automated notifications." }
+        ],
+        key: [["a", "False positive is riskier (a suitable applicant rejected without review). Prioritise precision."],
+              ["b", "False negative is riskier (an attack gets through). Prioritise recall."],
+              ["c", "False positive is riskier (users annoyed by irrelevant notifications). Prioritise precision."]]
+      },
+      {
+        id: "l3", title: "Exercise 3", sub: "Generalisation and cross-validation", board: boardModels,
+        task: "Three models were trained and tested. Model R was also evaluated with 5-fold cross-validation." +
+          '<ol type="a"><li>Diagnose each model: underfitting, good fit, or overfitting.</li>' +
+          "<li>Compute the mean cross-validation accuracy for Model R and explain why it is more trustworthy.</li>" +
+          "<li>Suggest two ways to improve Model P.</li></ol>",
+        intro: "Diagnosis needs two things at once: how high the scores are, and how far apart training and testing sit. Compute the gap first, then label the model.",
+        steps: [
+          { kind: "calc", title: "Compute the training/testing gap", q: "What is the gap between training and testing accuracy for Model P?",
+            opts: [{ t: "27 points", ok: 1 },
+                   { t: "71 points", h: "71% is the testing score, not the gap." },
+                   { t: "2 points", h: "That is the gap for Models Q and R." }],
+            use: ["rowP", "rowQ", "rowR"], reveal: ["gapP", "gapQ", "gapR"],
+            line: { k: "Gap", v: "P: 98 − 71 = 27 · Q: 66 − 64 = 2 · R: 88 − 86 = 2" },
+            say: "Model P loses 27 points the moment it meets new data. Models Q and R drop by only 2." },
+          { kind: "diag", title: "Diagnose Model P", q: "Training 98%, testing 71%, gap 27 points. What is the diagnosis?",
+            opts: [{ t: "Overfitting", ok: 1 },
+                   { t: "Underfitting", h: "Underfitting means training is low too, but here it is 98%." },
+                   { t: "Good fit", h: "Good fit needs training and testing to sit close together." }],
+            use: ["rowP", "gapP"], reveal: ["dP"], line: { k: "Model P", v: "Overfitting" },
+            say: "Model P has almost memorised the training data, and its performance collapses on new data." },
+          { kind: "diag", title: "Diagnose Model Q", q: "Training 66%, testing 64%. What is the diagnosis?",
+            opts: [{ t: "Underfitting", ok: 1 },
+                   { t: "Good fit", h: "The gap is small, but both scores are low." },
+                   { t: "Overfitting", h: "Overfitting shows up as a large gap." }],
+            use: ["rowQ", "gapQ"], reveal: ["dQ"], line: { k: "Model Q", v: "Underfitting" },
+            say: "Model Q is too simple to capture the pattern: even on training data it scores low.",
+            why: "A small gap is not enough. Good fit needs a small gap and high scores." },
+          { kind: "diag", title: "Diagnose Model R", q: "Training 88%, testing 86%. What is the diagnosis?",
+            opts: [{ t: "Good fit", ok: 1 },
+                   { t: "Overfitting", h: "The gap is only 2 points." },
+                   { t: "Underfitting", h: "88% and 86% are high for this problem." }],
+            use: ["rowR", "gapR"], reveal: ["dR"], line: { k: "Model R", v: "Good fit" },
+            say: "Both scores are high and close, so Model R generalises best of the three." },
+          { kind: "calc", title: "Mean cross-validation accuracy", q: "What is the mean 5-fold cross-validation accuracy for Model R?",
+            opts: [{ t: "86%", ok: 1 },
+                   { t: "85%", h: "That is the first fold. Add all five and divide by 5." },
+                   { t: "88%", h: "That is the best fold, not the mean." }],
+            use: ["folds"], reveal: ["cv"], line: { k: "Mean CV", v: frac("85 + 87 + 86 + 88 + 84", "5") + " = " + frac("430", "5") + " = 86%" },
+            say: "The mean is 86%, the same as the testing score for Model R. Both evaluations agree." },
+          { kind: "interp", title: "Why trust the CV mean more?", q: "Which reason is the strongest?",
+            opts: [{ t: "Each slice of data takes a turn as the test set, so the result does not depend on one split", ok: 1 },
+                   { t: "Cross-validation always gives a higher number", h: "The CV mean can be higher or lower. What changes is stability." },
+                   { t: "Cross-validation uses the final test set five times", h: "Cross-validation is used during development. The final test set stays untouched." }],
+            use: ["folds", "cv"], line: { k: "Reason", v: "Five splits, scores from 84% to 88%" },
+            say: "A single train-test split can happen to be easy or hard. Five folds show that Model R sits steadily near 86%, between 84% and 88%." },
+          { kind: "interp", title: "Fix Model P", q: "Which step helps reduce Model P's overfitting?",
+            opts: [{ t: "Reduce model complexity or apply regularisation", ok: 1 },
+                   { t: "Increase model complexity", h: "Model P is already too complex: it memorises the training data." },
+                   { t: "Train longer on the same data", h: "Training longer on the same data only deepens the memorisation." }],
+            use: ["rowP", "dP"], line: { k: "Fix for P", v: "Lower complexity, add training data" },
+            say: "Two sound moves: (1) reduce complexity or add regularisation so the model cannot memorise noise; (2) collect more training data so the general pattern outweighs the special cases.",
+            why: "Other valid options: keep only relevant features, tune hyperparameters, and use cross-validation during development. All of them aim to shrink that 27-point gap." }
+        ],
+        key: [["a", "P overfits (gap 27 points), Q underfits (both scores low), R is a good fit (high and close)."],
+              ["b", "Mean CV for Model R = 430 / 5 = 86%. More trustworthy because it uses five splits instead of one."],
+              ["c", "Reduce complexity or add regularisation; collect more training data. Alternatives: feature selection, hyperparameter tuning, cross-validation."]]
+      }
+    ];
+
+    // ---------- state ----------
+    var ci = 0, si = 0;
+    var solved = new Set();
+
+    function guessOn() { return $("ev-guess").checked; }
+
+    function shuffle(list, seed) {
+      var b = list.slice();
+      for (var i = b.length - 1; i > 0; i--) {
+        var j = (i * 7 + seed * 3 + 1) % (i + 1);
+        var t = b[i]; b[i] = b[j]; b[j] = t;
+      }
+      return b;
+    }
+
+    function renderTabs() {
+      $("ev-tabs").innerHTML = CASES.map(function (c, i) {
+        return '<button type="button" class="ev-tab" role="tab" aria-selected="' + (i === ci) +
+          '" data-i="' + i + '"><span>' + c.title + "</span><small>" + c.sub + "</small></button>";
+      }).join("");
+      Array.prototype.forEach.call($("ev-tabs").querySelectorAll(".ev-tab"), function (b) {
+        b.addEventListener("click", function () {
+          ci = Number(b.dataset.i); si = 0; solved.clear(); render();
+        });
+      });
+    }
+
+    function formula(k) {
+      return '<div class="ev-formula">' + FORM[k].f + '<span class="cap">' + FORM[k].cap + "</span></div>";
+    }
+
+    function render() {
+      var c = CASES[ci], n = c.steps.length;
+      var cur = si >= 1 && si <= n ? c.steps[si - 1] : null;
+      var guessing = guessOn() && cur && !solved.has(si);
+
+      var rev = new Set(), nw = new Set(), used = new Set(cur ? cur.use || [] : []);
+      for (var k = 0; k < Math.min(si, n); k++) {
+        var st = c.steps[k], isCur = k === si - 1;
+        (st.reveal || []).forEach(function (r) {
+          if (isCur) { if (!guessing) nw.add(r); } else rev.add(r);
+        });
+      }
+
+      $("ev-task").innerHTML = "<b>The question.</b> " + c.task;
+      $("ev-board").innerHTML = c.board({ rev: rev, nw: nw, used: used });
+
+      // worksheet
+      $("ev-sheet-card").classList.toggle("ev-off", !!c.noSheet);
+      if (!c.noSheet) {
+        var rows = "", no = 0;
+        for (var j = 0; j < Math.min(si, n); j++) {
+          var s2 = c.steps[j], isCur2 = j === si - 1;
+          if (!s2.line) continue;
+          if (isCur2 && guessing) continue;
+          no++;
+          rows += '<li class="' + (isCur2 ? "new" : "") + '"><span class="no">' + no + '</span><span><span class="k">' +
+            s2.line.k + "</span>" + s2.line.v + "</span></li>";
+        }
+        $("ev-sheet").innerHTML = rows || '<li><span class="no">·</span><span class="empty">Each step will appear here.</span></li>';
+      }
+
+      // step card
+      var html = "";
+      if (si === 0) {
+        html = '<span class="ev-stepno">Before you start</span><p class="ev-h">What is the plan?</p><p class="ev-say">' + c.intro + "</p>" +
+          '<p class="ev-why">' + (guessOn()
+            ? "Guess mode is on: at each step, commit to an answer first. Wrong options are crossed out and given a hint."
+            : "Guess mode is off: each step shows its answer straight away.") + "</p>";
+      } else if (cur) {
+        var K = KIND[cur.kind];
+        html = '<span class="ev-stepno">Step ' + si + " of " + n + '</span><span class="ev-chip ' + K.cls + '">' + K.label + "</span>";
+        if (guessing) {
+          html += '<p class="ev-h">' + cur.q + "</p>" + (cur.form ? formula(cur.form) : "") +
+            '<div class="ev-guess"><div class="ev-opts" id="ev-opts">' +
+            shuffle(cur.opts.map(function (o, i) { return { o: o, i: i }; }), si + ci).map(function (x) {
+              return '<button type="button" class="ev-opt" data-i="' + x.i + '">' + x.o.t + "</button>";
+            }).join("") +
+            '</div><p class="ev-hint" id="ev-hint">Pick one answer to open this step.</p></div>';
+        } else {
+          var ans = cur.opts.filter(function (o) { return o.ok; })[0];
+          html += '<p class="ev-h">' + cur.title + "</p>" +
+            '<dl class="ev-rows"><dt>Question</dt><dd>' + cur.q + "</dd><dt>Answer</dt><dd><b>" + ans.t + "</b></dd>" +
+            (cur.line ? "<dt>Written</dt><dd>" + cur.line.v + "</dd>" : "") + "</dl>" +
+            '<p class="ev-say">' + cur.say + "</p>" +
+            (cur.warn ? '<p class="ev-warnbox">' + cur.warn + "</p>" : "") +
+            (cur.why ? '<p class="ev-why">' + cur.why + "</p>" : "") +
+            (cur.form ? formula(cur.form) : "");
+        }
+      } else {
+        html = '<span class="ev-stepno">Done</span><p class="ev-h">Answer key: ' + c.title + "</p>" +
+          '<div class="ev-verdict"><b>Model answers</b><div class="ev-scroll"><table class="ev-key">' +
+          '<tr><th>Part</th><th>Answer</th></tr>' +
+          c.key.map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>"; }).join("") +
+          "</table></div></div>" +
+          '<p class="ev-why">Pick another exercise, or press Start over to try again with guess mode.</p>';
+      }
+      $("ev-card").innerHTML = html;
+
+      if (guessing) {
+        Array.prototype.forEach.call($("ev-opts").querySelectorAll(".ev-opt"), function (b) {
+          b.addEventListener("click", function () {
+            var o = cur.opts[Number(b.dataset.i)];
+            if (o.ok) { solved.add(si); render(); }
+            else {
+              b.classList.add("wrong");
+              b.disabled = true;
+              $("ev-hint").textContent = o.h || "Not quite. Try again.";
+            }
+          });
+        });
+      }
+
+      $("ev-dots").innerHTML = "";
+      for (var d = 0; d <= n + 1; d++) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ev-dot " + (d < si ? "done " : "") + (d === si ? "cur" : "");
+        btn.textContent = d === 0 ? "·" : d > n ? "✓" : String(d);
+        btn.setAttribute("aria-label", "Go to step " + d);
+        btn.dataset.k = String(d);
+        btn.addEventListener("click", function (e) { si = Number(e.currentTarget.dataset.k); render(); });
+        $("ev-dots").appendChild(btn);
+      }
+
+      $("ev-prev").disabled = si === 0;
+      $("ev-next").disabled = si > n || guessing;
+      Array.prototype.forEach.call($("ev-tabs").querySelectorAll(".ev-tab"), function (b, i) {
+        b.setAttribute("aria-selected", String(i === ci));
+      });
+    }
+
+    $("ev-next").addEventListener("click", function () { if (si <= CASES[ci].steps.length) { si++; render(); } });
+    $("ev-prev").addEventListener("click", function () { if (si > 0) { si--; render(); } });
+    $("ev-restart").addEventListener("click", function () { si = 0; solved.clear(); render(); });
+    $("ev-guess").addEventListener("change", function () { solved.clear(); render(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.target && e.target.closest && e.target.closest("input,textarea,select")) return;
+      if (e.key === "ArrowRight" && !$("ev-next").disabled) { si++; render(); }
+      if (e.key === "ArrowLeft" && !$("ev-prev").disabled) { si--; render(); }
+    });
+
+    renderTabs(); render();
+  })();
+</script>
