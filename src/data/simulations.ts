@@ -47,6 +47,16 @@ export const simulations: Simulation[] = [
     updated: "2026-11",
   },
   {
+    slug: "svm",
+    courseId: "fundamen-sains-data",
+    material: "Classification",
+    title: "Support Vector Machine",
+    summary:
+      "Find the widest street between two groups yourself, solve a small SVM by hand, turn the C dial, and see how a kernel turns a straight cut into a circle.",
+    topics: ["Margin & support vectors", "Soft margin (C)", "Kernels"],
+    updated: "2026-11",
+  },
+  {
     slug: "regression",
     courseId: "fundamen-sains-data",
     material: "Regression",
